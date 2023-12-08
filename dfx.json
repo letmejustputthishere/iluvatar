@@ -1,0 +1,26 @@
+{
+  "canisters": {
+    "minter": {
+      "candid": "cketh_minter.did",
+      "package": "ic-cketh-minter",
+      "type": "rust",
+      "optimize": "size",
+      "shrink": true,
+      "gzip": true
+    },
+    "ledger": {
+      "type": "custom",
+      "candid": "https://raw.githubusercontent.com/dfinity/ic/087190165198a9dc7b3c9cf80e0812c0c03964c6/rs/rosetta-api/icrc1/ledger/ledger.did",
+      "wasm": "https://download.dfinity.systems/ic/087190165198a9dc7b3c9cf80e0812c0c03964c6/canisters/ic-icrc1-ledger-u256.wasm"
+    }
+
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
