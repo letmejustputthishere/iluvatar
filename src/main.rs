@@ -2,7 +2,7 @@ use candid::{candid_method, Nat};
 use ic_canister_log::log;
 use ic_canisters_http_types::{HttpRequest, HttpResponse, HttpResponseBuilder};
 use ic_cdk_macros::{init, post_upgrade, pre_upgrade, query, update};
-use ic_cketh_minter::address::{validate_address_as_destination, Address, AddressValidationError};
+use ic_cketh_minter::address::{validate_address_as_destination, AddressValidationError};
 use ic_cketh_minter::deposit::scrap_eth_logs;
 use ic_cketh_minter::endpoints::events::{
     Event as CandidEvent, EventSource as CandidEventSource, GetEventsArg, GetEventsResult,
@@ -31,7 +31,6 @@ use icrc_ledger_client_cdk::{CdkRuntime, ICRC1Client};
 use icrc_ledger_types::icrc1::transfer::Memo;
 use icrc_ledger_types::icrc2::transfer_from::TransferFromArgs;
 use num_traits::cast::ToPrimitive;
-use std::str::FromStr;
 use std::time::Duration;
 
 mod dashboard;
@@ -152,14 +151,13 @@ async fn withdraw_eth(
         ))
     });
 
-    let destination = validate_address_as_destination(&recipient).map_err(|e| match e {
-        AddressValidationError::Invalid { .. } | AddressValidationError::NotSupported(_) => {
-            ic_cdk::trap(&e.to_string())
-        }
-        AddressValidationError::Blocked(address) => WithdrawalError::RecipientAddressBlocked {
-            address: address.to_string(),
-        },
-    })?;
+    let destination = validate_address_as_destination(&recipient)
+        .map_err(|e| match e {
+            AddressValidationError::Invalid { .. } | AddressValidationError::NotSupported(_) => {
+                ic_cdk::trap(&e.to_string())
+            }
+        })
+        .unwrap();
 
     let amount = Wei::try_from(amount).expect("failed to convert Nat to u256");
 
@@ -245,14 +243,6 @@ async fn withdraw_eth(
 async fn retrieve_eth_status(block_index: u64) -> RetrieveEthStatus {
     let ledger_burn_index = LedgerBurnIndex::new(block_index);
     read_state(|s| s.eth_transactions.transaction_status(&ledger_burn_index))
-}
-
-#[candid_method(query)]
-#[query]
-fn is_address_blocked(address_string: String) -> bool {
-    let address = Address::from_str(&address_string)
-        .unwrap_or_else(|e| ic_cdk::trap(&format!("invalid recipient address: {:?}", e)));
-    ic_cketh_minter::blocklist::is_blocked(address)
 }
 
 #[candid_method(update)]

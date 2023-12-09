@@ -155,28 +155,7 @@ async fn scrap_eth_logs_range_inclusive(
                     event.value,
                     event.principal
                 );
-                if crate::blocklist::is_blocked(event.from_address) {
-                    log!(
-                        INFO,
-                        "Received event from a blocked address: {} for {} WEI",
-                        event.from_address,
-                        event.value,
-                    );
-                    mutate_state(|s| {
-                        process_event(
-                            s,
-                            EventType::InvalidDeposit {
-                                event_source: crate::eth_logs::EventSource {
-                                    transaction_hash: event.transaction_hash,
-                                    log_index: event.log_index,
-                                },
-                                reason: format!("blocked address {}", event.from_address),
-                            },
-                        )
-                    });
-                } else {
-                    mutate_state(|s| process_event(s, EventType::AcceptedDeposit(event)));
-                }
+                mutate_state(|s| process_event(s, EventType::AcceptedDeposit(event)));
             }
             if read_state(State::has_events_to_mint) {
                 ic_cdk_timers::set_timer(Duration::from_secs(0), || ic_cdk::spawn(mint_cketh()));

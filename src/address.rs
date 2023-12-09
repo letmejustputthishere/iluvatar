@@ -127,7 +127,6 @@ fn keccak(bytes: &[u8]) -> [u8; 32] {
 pub enum AddressValidationError {
     Invalid { error: String },
     NotSupported(Address),
-    Blocked(Address),
 }
 
 impl Display for AddressValidationError {
@@ -139,9 +138,6 @@ impl Display for AddressValidationError {
             AddressValidationError::NotSupported(address) => {
                 write!(f, "Address {} is not supported", address)
             }
-            AddressValidationError::Blocked(address) => {
-                write!(f, "address {} is blocked", address)
-            }
         }
     }
 }
@@ -152,9 +148,6 @@ pub fn validate_address_as_destination(address: &str) -> Result<Address, Address
         Address::from_str(address).map_err(|e| AddressValidationError::Invalid { error: e })?;
     if address == Address::ZERO {
         return Err(AddressValidationError::NotSupported(address));
-    }
-    if crate::blocklist::is_blocked(address) {
-        return Err(AddressValidationError::Blocked(address));
     }
     Ok(address)
 }
