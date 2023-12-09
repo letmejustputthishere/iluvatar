@@ -2,7 +2,7 @@
 mod tests;
 
 use crate::address::Address;
-use crate::eth_logs::ReceivedEthEvent;
+use crate::eth_logs::TransferEvent;
 use crate::eth_rpc::Hash;
 use crate::numeric::LogIndex;
 use crate::state::transactions::ReimbursementRequest;
@@ -64,8 +64,8 @@ impl From<BurnMemo> for Memo {
     }
 }
 
-impl From<ReceivedEthEvent> for Memo {
-    fn from(event: ReceivedEthEvent) -> Self {
+impl From<TransferEvent> for Memo {
+    fn from(event: TransferEvent) -> Self {
         Memo::from(MintMemo::Convert {
             from_address: event.from_address,
             tx_hash: event.transaction_hash,

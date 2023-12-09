@@ -16,20 +16,17 @@ pub fn apply_state_transition(state: &mut State, payload: &EventType) {
                 .upgrade(upgrade_arg.clone())
                 .expect("applying upgrade event should succeed");
         }
-        EventType::AcceptedDeposit(eth_event) => {
+        EventType::AcceptedTransfer(eth_event) => {
             state.record_event_to_mint(eth_event);
         }
-        EventType::InvalidDeposit {
+        EventType::InvalidTransfer {
             event_source,
             reason,
         } => {
             let _ = state.record_invalid_deposit(*event_source, reason.clone());
         }
-        EventType::MintedCkEth {
-            event_source,
-            mint_block_index,
-        } => {
-            state.record_successful_mint(*event_source, *mint_block_index);
+        EventType::MintedNft { event_source } => {
+            state.record_successful_mint(*event_source);
         }
         EventType::SyncedToBlock { block_number } => {
             state.last_scraped_block_number = *block_number;

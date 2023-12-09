@@ -1,36 +1,38 @@
 {% macro etherscan_address_link(address) -%}
 {% match ethereum_network %}
-  {%- when EthereumNetwork::Sepolia -%}
-  <a href="https://sepolia.etherscan.io/address/{{address}}"><code>{{address}}</code></a>
-  {%- when EthereumNetwork::Mainnet -%}
-  <a href="https://etherscan.io/address/{{address}}"><code>{{address}}</code></a>
+{%- when EthereumNetwork::Sepolia -%}
+<a href="https://sepolia.etherscan.io/address/{{address}}"><code>{{address}}</code></a>
+{%- when EthereumNetwork::Mainnet -%}
+<a href="https://etherscan.io/address/{{address}}"><code>{{address}}</code></a>
 {% endmatch %}
 {%- endmacro %}
 
 {% macro etherscan_block_link(block_number) -%}
 {% match ethereum_network %}
-  {%- when EthereumNetwork::Sepolia -%}
-  <a href="https://sepolia.etherscan.io/block/{{block_number.to_string_inner()}}"><code>{{block_number.to_string_inner()}}</code></a>
-  {%- when EthereumNetwork::Mainnet -%}
-  <a href="https://etherscan.io/block/{{block_number.to_string_inner()}}"><code>{{block_number.to_string_inner()}}</code></a>
+{%- when EthereumNetwork::Sepolia -%}
+<a
+    href="https://sepolia.etherscan.io/block/{{block_number.to_string_inner()}}"><code>{{block_number.to_string_inner()}}</code></a>
+{%- when EthereumNetwork::Mainnet -%}
+<a
+    href="https://etherscan.io/block/{{block_number.to_string_inner()}}"><code>{{block_number.to_string_inner()}}</code></a>
 {% endmatch %}
 {%- endmacro %}
 
 {% macro etherscan_tx_link(txhash) -%}
 {% match ethereum_network %}
-  {%- when EthereumNetwork::Sepolia -%}
-  <a href="https://sepolia.etherscan.io/tx/{{txhash}}"><code>{{txhash}}</code></a>
-  {%- when EthereumNetwork::Mainnet -%}
-  <a href="https://etherscan.io/tx/{{txhash}}"><code>{{txhash}}</code></a>
+{%- when EthereumNetwork::Sepolia -%}
+<a href="https://sepolia.etherscan.io/tx/{{txhash}}"><code>{{txhash}}</code></a>
+{%- when EthereumNetwork::Mainnet -%}
+<a href="https://etherscan.io/tx/{{txhash}}"><code>{{txhash}}</code></a>
 {% endmatch %}
 {%- endmacro %}
 
 {% macro format_opt_timestamp(maybe_ts) -%}
 {% match maybe_ts %}
-  {%- when Some with (ts) -%}
-  {{ ts|timestamp_to_datetime }}
-  {%- when None -%}
-  N/A
+{%- when Some with (ts) -%}
+{{ ts|timestamp_to_datetime }}
+{%- when None -%}
+N/A
 {% endmatch %}
 {%- endmacro %}
 
@@ -101,7 +103,9 @@
                 <tbody>
                     <tr id="ethereum-network">
                         <th>Ethereum Chain</th>
-                        <td><a href="https://github.com/ethereum-lists/chains/blob/master/_data/chains/eip155-{{ethereum_network.chain_id()}}.json">{{ ethereum_network }}</a></td>
+                        <td><a
+                                href="https://github.com/ethereum-lists/chains/blob/master/_data/chains/eip155-{{ethereum_network.chain_id()}}.json">{{
+                                ethereum_network }}</a></td>
                     </tr>
                     <tr id="minter-address">
                         <th>Minter address</th>
@@ -182,26 +186,26 @@
             <h3 id="events-to-mint">Events to mint</h3>
             <table>
                 <thead>
-                <tr>
-                    <th>Txn Hash</th>
-                    <th>Log Index</th>
-                    <th>From</th>
-                    <th>Value (wei)</th>
-                    <th>Beneficiary</th>
-                    <th>Block</th>
-                </tr>
+                    <tr>
+                        <th>Txn Hash</th>
+                        <th>Log Index</th>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Token ID</th>
+                        <th>Block</th>
+                    </tr>
                 </thead>
                 <tbody>
-                {% for event in events_to_mint -%}
-                <tr>
-                    <td>{% call etherscan_tx_link(event.transaction_hash.to_string()) %}</td>
-                    <td class="numeric">{{ event.log_index }}</td>
-                    <td>{% call etherscan_address_link(event.from_address.to_string()) %}</td>
-                    <td class="numeric">{{ event.value }}</td>
-                    <td><code>{{ event.principal }}</code></td>
-                    <td class="numeric">{% call etherscan_block_link(event.block_number) %}</td>
-                </tr>
-                {%- endfor %}
+                    {% for event in events_to_mint -%}
+                    <tr>
+                        <td>{% call etherscan_tx_link(event.transaction_hash.to_string()) %}</td>
+                        <td class="numeric">{{ event.log_index }}</td>
+                        <td>{% call etherscan_address_link(event.from_address.to_string()) %}</td>
+                        <td>{% call etherscan_address_link(event.to_address.to_string()) %}</td>
+                        <td class="numeric">{{ event.token_id}}</td>
+                        <td class="numeric">{% call etherscan_block_link(event.block_number) %}</td>
+                    </tr>
+                    {%- endfor %}
                 </tbody>
             </table>
             {% endif %}
@@ -214,20 +218,18 @@
                         <th>Txn Hash</th>
                         <th>Log Index</th>
                         <th>From</th>
-                        <th>Value (wei)</th>
-                        <th>Beneficiary</th>
-                        <th>Mint Block Index</th>
+                        <th>To</th>
+                        <th>Token ID</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for event in minted_events %}
                     <tr>
-                        <td>{% call etherscan_tx_link(event.deposit_event.transaction_hash.to_string()) %}</td>
-                        <td class="numeric">{{ event.deposit_event.log_index }}</td>
-                        <td>{% call etherscan_address_link(event.deposit_event.from_address.to_string()) %}</td>
-                        <td class="numeric">{{ event.deposit_event.value }}</td>
-                        <td><code>{{ event.deposit_event.principal }}</code></td>
-                        <td class="numeric">{{ event.mint_block_index }}</td>
+                        <td>{% call etherscan_tx_link(event.transfer_event.transaction_hash.to_string()) %}</td>
+                        <td class="numeric">{{ event.transfer_event.log_index }}</td>
+                        <td>{% call etherscan_address_link(event.transfer_event.from_address.to_string()) %}</td>
+                        <td>{% call etherscan_address_link(event.transfer_event.to_address.to_string()) %}</td>
+                        <td class="numeric">{{ event.transfer_event.token_id}}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -260,22 +262,22 @@
             <h3 id="withdrawal-requests">Withdrawal Requests ckETH → ETH</h3>
             <table>
                 <thead>
-                <tr>
-                    <th>Ledger Burn Index</th>
-                    <th>Destination</th>
-                    <th>Amount (Wei)</th>
-                    <th>Created At</th>
-                </tr>
+                    <tr>
+                        <th>Ledger Burn Index</th>
+                        <th>Destination</th>
+                        <th>Amount (Wei)</th>
+                        <th>Created At</th>
+                    </tr>
                 </thead>
                 <tbody>
-                {% for withdrawal in withdrawal_requests %}
-                <tr>
-                    <td class="numeric">{{ withdrawal.ledger_burn_index }}</td>
-                    <td>{% call etherscan_address_link(withdrawal.destination) %}</td>
-                    <td class="numeric">{{ withdrawal.withdrawal_amount }}</td>
-                    <td>{% call format_opt_timestamp(withdrawal.created_at) %}</td>
-                </tr>
-                {% endfor %}
+                    {% for withdrawal in withdrawal_requests %}
+                    <tr>
+                        <td class="numeric">{{ withdrawal.ledger_burn_index }}</td>
+                        <td>{% call etherscan_address_link(withdrawal.destination) %}</td>
+                        <td class="numeric">{{ withdrawal.withdrawal_amount }}</td>
+                        <td>{% call format_opt_timestamp(withdrawal.created_at) %}</td>
+                    </tr>
+                    {% endfor %}
                 </tbody>
             </table>
             {% endif %}
@@ -284,22 +286,22 @@
             <h3 id="pending-transactions">Pending Transactions ckETH → ETH</h3>
             <table>
                 <thead>
-                <tr>
-                    <th>Ledger Burn Index</th>
-                    <th>To</th>
-                    <th>Value (Wei)</th>
-                    <th>Status</th>
-                </tr>
+                    <tr>
+                        <th>Ledger Burn Index</th>
+                        <th>To</th>
+                        <th>Value (Wei)</th>
+                        <th>Status</th>
+                    </tr>
                 </thead>
                 <tbody>
-                {% for tx in pending_transactions %}
-                <tr>
-                    <td class="numeric">{{ tx.ledger_burn_index }}</td>
-                    <td>{% call etherscan_address_link(tx.destination) %}</td>
-                    <td class="numeric">{{ tx.transaction_amount }}</td>
-                    <td>{{ tx.status }}</td>
-                </tr>
-                {% endfor %}
+                    {% for tx in pending_transactions %}
+                    <tr>
+                        <td class="numeric">{{ tx.ledger_burn_index }}</td>
+                        <td>{% call etherscan_address_link(tx.destination) %}</td>
+                        <td class="numeric">{{ tx.transaction_amount }}</td>
+                        <td>{{ tx.status }}</td>
+                    </tr>
+                    {% endfor %}
                 </tbody>
             </table>
             {% endif %}
@@ -308,28 +310,28 @@
             <h3 id="finalized-transactions">Finalized Transactions ckETH → ETH</h3>
             <table>
                 <thead>
-                <tr>
-                    <th>Ledger Burn Index</th>
-                    <th>To</th>
-                    <th>Value (Wei)</th>
-                    <th>Txn Fee (Wei)</th>
-                    <th>Block</th>
-                    <th>Txn Hash</th>
-                    <th>Status</th>
-                </tr>
+                    <tr>
+                        <th>Ledger Burn Index</th>
+                        <th>To</th>
+                        <th>Value (Wei)</th>
+                        <th>Txn Fee (Wei)</th>
+                        <th>Block</th>
+                        <th>Txn Hash</th>
+                        <th>Status</th>
+                    </tr>
                 </thead>
                 <tbody>
-                {% for tx in finalized_transactions %}
-                <tr>
-                    <td class="numeric">{{ tx.ledger_burn_index }}</td>
-                    <td>{% call etherscan_address_link(tx.destination) %}</td>
-                    <td class="numeric">{{ tx.transaction_amount }}</td>
-                    <td class="numeric">{{ tx.transaction_fee }}</td>
-                    <td class="numeric">{% call etherscan_block_link(tx.block_number) %}</td>
-                    <td>{% call etherscan_tx_link(tx.transaction_hash) %}</td>
-                    <td>{{ tx.status }}</td>
-                </tr>
-                {% endfor %}
+                    {% for tx in finalized_transactions %}
+                    <tr>
+                        <td class="numeric">{{ tx.ledger_burn_index }}</td>
+                        <td>{% call etherscan_address_link(tx.destination) %}</td>
+                        <td class="numeric">{{ tx.transaction_amount }}</td>
+                        <td class="numeric">{{ tx.transaction_fee }}</td>
+                        <td class="numeric">{% call etherscan_block_link(tx.block_number) %}</td>
+                        <td>{% call etherscan_tx_link(tx.transaction_hash) %}</td>
+                        <td>{{ tx.status }}</td>
+                    </tr>
+                    {% endfor %}
                 </tbody>
             </table>
             {% endif %}
@@ -351,7 +353,8 @@
                         <td class="numeric">{{ r.withdrawal_id }}</td>
                         <td class="numeric">{{ r.reimbursed_in_block }}</td>
                         <td class="numeric">{{ r.reimbursed_amount }}</td>
-                        <td>{% if r.transaction_hash.is_some() %}{% call etherscan_tx_link(r.transaction_hash.unwrap()) %}{% else%}N/A{% endif %}</td>
+                        <td>{% if r.transaction_hash.is_some() %}{% call etherscan_tx_link(r.transaction_hash.unwrap())
+                            %}{% else%}N/A{% endif %}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -391,6 +394,6 @@
             inputPrincipal.addEventListener("input", recomputePrincipal);
         });
     </script>
-    </body>
-</html>
+</body>
 
+</html>

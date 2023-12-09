@@ -1,7 +1,7 @@
 use crate::address::Address;
 use crate::checked_amount::CheckedAmountOf;
 use crate::endpoints::CandidBlockTag;
-use crate::eth_logs::{EventSource, ReceivedEthEvent};
+use crate::eth_logs::{EventSource, TransferEvent};
 use crate::eth_rpc::{BlockTag, Hash};
 use crate::eth_rpc_client::responses::{TransactionReceipt, TransactionStatus};
 use crate::lifecycle::init::InitArg;
@@ -62,7 +62,7 @@ fn a_state() -> State {
 }
 
 mod mint_transaction {
-    use crate::eth_logs::{EventSourceError, ReceivedEthEvent};
+    use crate::eth_logs::{EventSourceError, TransferEvent};
     use crate::lifecycle::init::InitArg;
     use crate::numeric::{wei_from_milli_ether, LedgerMintIndex, LogIndex};
     use crate::state::tests::received_eth_event;
@@ -77,14 +77,11 @@ mod mint_transaction {
 
         assert!(state.events_to_mint.contains_key(&event.source()));
 
-        let block_index = LedgerMintIndex::new(1u64);
-
         let minted_event = MintedEvent {
-            deposit_event: event.clone(),
-            mint_block_index: block_index,
+            transfer_event: event.clone(),
         };
 
-        state.record_successful_mint(event.source(), block_index);
+        state.record_successful_mint(event.source());
 
         assert!(!state.events_to_mint.contains_key(&event.source()));
         assert_eq!(
@@ -96,11 +93,11 @@ mod mint_transaction {
     #[test]
     fn should_allow_minting_events_with_equal_txhash() {
         let mut state = dummy_state();
-        let event_1 = ReceivedEthEvent {
+        let event_1 = TransferEvent {
             log_index: LogIndex::from(1u8),
             ..received_eth_event()
         };
-        let event_2 = ReceivedEthEvent {
+        let event_2 = TransferEvent {
             log_index: LogIndex::from(2u8),
             ..received_eth_event()
         };
@@ -125,7 +122,7 @@ mod mint_transaction {
         let event = received_eth_event();
 
         assert!(!state.events_to_mint.contains_key(&event.source()));
-        state.record_successful_mint(event.source(), LedgerMintIndex::new(1));
+        state.record_successful_mint(event.source());
     }
 
     #[test]
@@ -189,8 +186,8 @@ mod mint_transaction {
     }
 }
 
-fn received_eth_event() -> ReceivedEthEvent {
-    ReceivedEthEvent {
+fn received_eth_event() -> TransferEvent {
+    TransferEvent {
         transaction_hash: "0xf1ac37d920fa57d9caeebc7136fea591191250309ffca95ae0e8a7739de89cc2"
             .parse()
             .unwrap(),
@@ -199,10 +196,10 @@ fn received_eth_event() -> ReceivedEthEvent {
         from_address: "0xdd2851cdd40ae6536831558dd46db62fac7a844d"
             .parse()
             .unwrap(),
-        value: Wei::from(10_000_000_000_000_000_u128),
-        principal: "k2t6j-2nvnp-4zjm3-25dtz-6xhaa-c7boj-5gayf-oj3xs-i43lp-teztq-6ae"
+        to_address: "0xbb2851cdd40ae6536831558dd46db62fac7a844d"
             .parse()
             .unwrap(),
+        token_id: 0,
     }
 }
 
@@ -404,16 +401,16 @@ prop_compose! {
         block_number in arb_checked_amount_of(),
         log_index in arb_checked_amount_of(),
         from_address in arb_address(),
-        value in arb_checked_amount_of(),
-        principal in arb_principal(),
-    ) -> ReceivedEthEvent {
-        ReceivedEthEvent {
+        to_address in arb_address(),
+        token_id in arb_u256(),
+    ) -> TransferEvent {
+        TransferEvent {
             transaction_hash,
             block_number,
             log_index,
             from_address,
-            value,
-            principal,
+            to_address,
+            token_id
         }
     }
 }
@@ -493,17 +490,12 @@ fn arb_event_type() -> impl Strategy<Value = EventType> {
     prop_oneof![
         arb_init_arg().prop_map(EventType::Init),
         arb_upgrade_arg().prop_map(EventType::Upgrade),
-        arb_received_eth_event().prop_map(EventType::AcceptedDeposit),
+        arb_received_eth_event().prop_map(EventType::AcceptedTransfer),
         arb_event_source().prop_map(|event_source| EventType::InvalidDeposit {
             event_source,
             reason: "bad principal".to_string()
         }),
-        (arb_event_source(), any::<u64>()).prop_map(|(event_source, index)| {
-            EventType::MintedCkEth {
-                event_source,
-                mint_block_index: index.into(),
-            }
-        }),
+        (arb_event_source()).prop_map(|(event_source)| { EventType::MintedNft { event_source } }),
         arb_checked_amount_of().prop_map(|block_number| EventType::SyncedToBlock { block_number }),
         (any::<u64>(), arb_unsigned_tx()).prop_map(|(withdrawal_id, transaction)| {
             EventType::CreatedTransaction {
@@ -728,26 +720,25 @@ fn state_equivalence() {
         last_scraped_block_number: BlockNumber::new(1_000_000),
         last_observed_block_number: Some(BlockNumber::new(2_000_000)),
         events_to_mint: btreemap! {
-            source("0xac493fb20c93bd3519a4a5d90ce72d69455c41c5b7e229dafee44344242ba467", 100) => ReceivedEthEvent {
+            source("0xac493fb20c93bd3519a4a5d90ce72d69455c41c5b7e229dafee44344242ba467", 100) => TransferEvent {
                 transaction_hash: "0xac493fb20c93bd3519a4a5d90ce72d69455c41c5b7e229dafee44344242ba467".parse().unwrap(),
                 block_number: BlockNumber::new(500_000),
                 log_index: LogIndex::new(100),
                 from_address: "0x9d68bd6F351bE62ed6dBEaE99d830BECD356Ed25".parse().unwrap(),
-                value: Wei::new(500_000_000_000_000_000),
-                principal: "lsywz-sl5vm-m6tct-7fhwt-6gdrw-4uzsg-ibknl-44d6d-a2oyt-c2cxu-7ae".parse().unwrap(),
+                to_address: "0xbb68bd6F351bE62ed6dBEaE99d830BECD356Ed25".parse().unwrap(),
+                token_id : 1
             }
         },
         minted_events: btreemap! {
             source("0x705f826861c802b407843e99af986cfde8749b669e5e0a5a150f4350bcaa9bc3", 1) => MintedEvent {
-                deposit_event: ReceivedEthEvent {
+                transfer_event: TransferEvent {
                     transaction_hash: "0x705f826861c802b407843e99af986cfde8749b669e5e0a5a150f4350bcaa9bc3".parse().unwrap(),
                     block_number: BlockNumber::new(450_000),
                     log_index: LogIndex::new(1),
                     from_address: "0x9d68bd6F351bE62ed6dBEaE99d830BECD356Ed25".parse().unwrap(),
-                    value: Wei::new(10_000_000_000_000_000),
-                    principal: "2chl6-4hpzw-vqaaa-aaaaa-c".parse().unwrap(),
+                    to_address: "0xbb68bd6F351bE62ed6dBEaE99d830BECD356Ed25".parse().unwrap(),
+                    token_id : 0
                 },
-                mint_block_index: LedgerMintIndex::new(1),
             }
         },
         invalid_events: btreemap! {
@@ -987,7 +978,7 @@ mod eth_balance {
         let deposit_event = received_eth_event();
         apply_state_transition(
             &mut state,
-            &EventType::AcceptedDeposit(deposit_event.clone()),
+            &EventType::AcceptedTransfer(deposit_event.clone()),
         );
         let balance_after = state.eth_balance.clone();
 
@@ -1023,7 +1014,7 @@ mod eth_balance {
         let mut state_before_withdrawal = a_state();
         apply_state_transition(
             &mut state_before_withdrawal,
-            &EventType::AcceptedDeposit(received_eth_event()),
+            &EventType::AcceptedTransfer(received_eth_event()),
         );
 
         let mut state_after_successful_withdrawal = state_before_withdrawal.clone();

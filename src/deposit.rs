@@ -1,5 +1,5 @@
 use crate::address::Address;
-use crate::eth_logs::{report_transaction_error, ReceivedEthEventError};
+use crate::eth_logs::{report_transaction_error, TransferEventError};
 use crate::eth_rpc::{BlockSpec, HttpOutcallError};
 use crate::eth_rpc_client::EthRpcClient;
 use crate::guard::TimerGuard;
@@ -31,46 +31,37 @@ async fn mint_cketh() {
     let mut error_count = 0;
 
     for (event_source, event) in events {
-        let block_index = match client
-            .transfer(TransferArg {
-                from_subaccount: None,
-                to: event.principal.into(),
-                fee: None,
-                created_at_time: None,
-                memo: Some(event.clone().into()),
-                amount: candid::Nat::from(event.value),
-            })
-            .await
-        {
-            Ok(Ok(block_index)) => block_index.0.to_u64().expect("nat does not fit into u64"),
-            Ok(Err(err)) => {
-                log!(INFO, "Failed to mint ckETH: {event:?} {err}");
-                error_count += 1;
-                continue;
-            }
-            Err(err) => {
-                log!(
-                    INFO,
-                    "Failed to send a message to the ledger ({ledger_canister_id}): {err:?}"
-                );
-                error_count += 1;
-                continue;
-            }
-        };
-        mutate_state(|s| {
-            process_event(
-                s,
-                EventType::MintedCkEth {
-                    event_source,
-                    mint_block_index: LedgerMintIndex::new(block_index),
-                },
-            )
-        });
+        // let block_index = match client
+        //     .transfer(TransferArg {
+        //         from_subaccount: None,
+        //         to: event.principal.into(),
+        //         fee: None,
+        //         created_at_time: None,
+        //         memo: Some(event.clone().into()),
+        //         amount: candid::Nat::from(event.value),
+        //     })
+        //     .await
+        // {
+        //     Ok(Ok(block_index)) => block_index.0.to_u64().expect("nat does not fit into u64"),
+        //     Ok(Err(err)) => {
+        //         log!(INFO, "Failed to mint ckETH: {event:?} {err}");
+        //         error_count += 1;
+        //         continue;
+        //     }
+        //     Err(err) => {
+        //         log!(
+        //             INFO,
+        //             "Failed to send a message to the ledger ({ledger_canister_id}): {err:?}"
+        //         );
+        //         error_count += 1;
+        //         continue;
+        //     }
+        // };
+        mutate_state(|s| process_event(s, EventType::MintedNft { event_source }));
         log!(
             INFO,
-            "Minted {} ckWei to {} in block {block_index}",
-            event.value,
-            event.principal
+            "generated metadata and assets for token id {}",
+            event.token_id,
         );
     }
 
@@ -87,7 +78,7 @@ async fn mint_cketh() {
 /// require that the number of blocks queried is no greater than MAX_BLOCK_SPREAD.
 /// Returns the last block number that was scraped (which is `min(from + MAX_BLOCK_SPREAD, to)`) if there
 /// was no error when querying the providers, otherwise returns `None`.
-async fn scrap_eth_logs_range_inclusive(
+async fn scrape_eth_logs_range_inclusive(
     contract_address: Address,
     from: BlockNumber,
     to: BlockNumber,
@@ -151,21 +142,20 @@ async fn scrap_eth_logs_range_inclusive(
             for event in transaction_events {
                 log!(
                     INFO,
-                    "Received event {event:?}; will mint {} wei to {}",
-                    event.value,
-                    event.principal
+                    "Received event {event:?}; will generate metadata and assets for token id {}",
+                    event.token_id,
                 );
-                mutate_state(|s| process_event(s, EventType::AcceptedDeposit(event)));
+                mutate_state(|s| process_event(s, EventType::AcceptedTransfer(event)));
             }
             if read_state(State::has_events_to_mint) {
                 ic_cdk_timers::set_timer(Duration::from_secs(0), || ic_cdk::spawn(mint_cketh()));
             }
             for error in errors {
-                if let ReceivedEthEventError::InvalidEventSource { source, error } = &error {
+                if let TransferEventError::InvalidEventSource { source, error } = &error {
                     mutate_state(|s| {
                         process_event(
                             s,
-                            EventType::InvalidDeposit {
+                            EventType::InvalidTransfer {
                                 event_source: *source,
                                 reason: error.to_string(),
                             },
@@ -217,7 +207,7 @@ pub async fn scrap_eth_logs() {
         let next_block_to_query = last_scraped_block_number
             .checked_increment()
             .unwrap_or(BlockNumber::MAX);
-        last_scraped_block_number = match scrap_eth_logs_range_inclusive(
+        last_scraped_block_number = match scrape_eth_logs_range_inclusive(
             contract_address,
             next_block_to_query,
             last_block_number,

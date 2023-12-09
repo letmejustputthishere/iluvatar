@@ -234,21 +234,20 @@ pub mod events {
     pub enum EventPayload {
         Init(InitArg),
         Upgrade(UpgradeArg),
-        AcceptedDeposit {
+        AcceptedTransfer {
             transaction_hash: String,
             block_number: Nat,
             log_index: Nat,
             from_address: String,
-            value: Nat,
-            principal: Principal,
+            to_address: String,
+            token_id: Nat,
         },
-        InvalidDeposit {
+        InvalidTransfer {
             event_source: EventSource,
             reason: String,
         },
-        MintedCkEth {
+        MintedNft {
             event_source: EventSource,
-            mint_block_index: Nat,
         },
         SyncedToBlock {
             block_number: Nat,

@@ -10,7 +10,7 @@ use ic_cketh_minter::endpoints::events::{
 use ic_cketh_minter::endpoints::{
     Eip1559TransactionPrice, RetrieveEthRequest, RetrieveEthStatus, WithdrawalArg, WithdrawalError,
 };
-use ic_cketh_minter::eth_logs::{EventSource, ReceivedEthEvent};
+use ic_cketh_minter::eth_logs::{EventSource, TransferEvent};
 use ic_cketh_minter::guard::retrieve_eth_guard;
 use ic_cketh_minter::lifecycle::MinterArg;
 use ic_cketh_minter::logs::{DEBUG, INFO};
@@ -331,34 +331,30 @@ fn get_events(arg: GetEventsArg) -> GetEventsResult {
             payload: match payload {
                 EventType::Init(args) => EP::Init(args),
                 EventType::Upgrade(args) => EP::Upgrade(args),
-                EventType::AcceptedDeposit(ReceivedEthEvent {
+                EventType::AcceptedTransfer(TransferEvent {
                     transaction_hash,
                     block_number,
                     log_index,
                     from_address,
-                    value,
-                    principal,
-                }) => EP::AcceptedDeposit {
+                    to_address,
+                    token_id,
+                }) => EP::AcceptedTransfer {
                     transaction_hash: transaction_hash.to_string(),
                     block_number: block_number.into(),
                     log_index: log_index.into(),
                     from_address: from_address.to_string(),
-                    value: value.into(),
-                    principal,
+                    to_address: to_address.to_string(),
+                    token_id: token_id.into(),
                 },
-                EventType::InvalidDeposit {
+                EventType::InvalidTransfer {
                     event_source,
                     reason,
-                } => EP::InvalidDeposit {
+                } => EP::InvalidTransfer {
                     event_source: map_event_source(event_source),
                     reason,
                 },
-                EventType::MintedCkEth {
-                    event_source,
-                    mint_block_index,
-                } => EP::MintedCkEth {
+                EventType::MintedNft { event_source } => EP::MintedNft {
                     event_source: map_event_source(event_source),
-                    mint_block_index: mint_block_index.get().into(),
                 },
                 EventType::SyncedToBlock { block_number } => EP::SyncedToBlock {
                     block_number: block_number.into(),

@@ -1,7 +1,7 @@
 mod decode_memo {
     use crate::cbor::tests::check_roundtrip;
     use crate::eth_rpc::Hash;
-    use crate::memo::{Address, ReceivedEthEvent};
+    use crate::memo::{Address, TransferEvent};
     use crate::memo::{BurnMemo, MintMemo};
     use crate::numeric::{BlockNumber, LedgerBurnIndex, LogIndex, Wei};
     use crate::state::transactions::ReimbursementRequest;
@@ -63,13 +63,16 @@ mod decode_memo {
         let from_address: crate::address::Address = "0xdd2851cdd40ae6536831558dd46db62fac7a844d"
             .parse()
             .unwrap();
-        let event = ReceivedEthEvent {
+        let to_address: crate::address::Address = "0xbb2851cdd40ae6536831558dd46db62fac7a844d"
+            .parse()
+            .unwrap();
+        let event = TransferEvent {
             transaction_hash,
             block_number: BlockNumber::new(3974279),
             log_index: LogIndex::from(39_u8),
             from_address,
-            value: Wei::from(10_000_000_000_000_000_u128),
-            principal: Principal::from_str("2chl6-4hpzw-vqaaa-aaaaa-c").unwrap(),
+            to_address,
+            token_id: ethnum::u256::from_str_hex("1c09"),
         };
         let memo: Memo = event.into();
 

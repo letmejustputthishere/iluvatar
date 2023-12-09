@@ -50,7 +50,7 @@ fn deserialize_json_reply() {
 
 mod eth_get_logs {
     use crate::address::Address;
-    use crate::eth_logs::ReceivedEthEvent;
+    use crate::eth_logs::TransferEvent;
     use crate::eth_rpc::{FixedSizeData, LogEntry};
     use crate::numeric::{BlockNumber, LogIndex, Wei};
     use assert_matches::assert_matches;
@@ -113,11 +113,12 @@ mod eth_get_logs {
         let event = r#"{
             "address": "0xb44b5e756a894775fc32eddf3314bb1b1944dc34",
             "topics": [
-                "0x257e057bb61920d8d0ed2cb7b720ac7f9c513cd1110bc9fa543079154f45f435",
-                "0x000000000000000000000000dd2851cdd40ae6536831558dd46db62fac7a844d",
-                "0x09efcdab00000000000100000000000000000000000000000000000000000000"
+                "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+                "0x000000000000000000000000e029f6996258686ca9e3cec0996bb2a4f98a04c2",
+                "0x00000000000000000000000029469395eaf6f95920e59f858042f0e28d98a20b",
+                "0x0000000000000000000000000000000000000000000000000000000000001c09"
             ],
-            "data": "0x000000000000000000000000000000000000000000000000002386f26fc10000",
+            "data": "0x",
             "blockNumber": "0x3ca487",
             "transactionHash": "0x705f826861c802b407843e99af986cfde8749b669e5e0a5a150f4350bcaa9bc3",
             "transactionIndex": "0x22",
@@ -126,18 +127,20 @@ mod eth_get_logs {
             "removed": false
         }"#;
         let parsed_event =
-            ReceivedEthEvent::try_from(serde_json::from_str::<LogEntry>(event).unwrap()).unwrap();
-        let expected_event = ReceivedEthEvent {
+            TransferEvent::try_from(serde_json::from_str::<LogEntry>(event).unwrap()).unwrap();
+        let expected_event = TransferEvent {
             transaction_hash: "0x705f826861c802b407843e99af986cfde8749b669e5e0a5a150f4350bcaa9bc3"
                 .parse()
                 .unwrap(),
             block_number: BlockNumber::new(3974279),
             log_index: LogIndex::from(39_u8),
-            from_address: "0xdd2851cdd40ae6536831558dd46db62fac7a844d"
+            from_address: "0xe029f6996258686ca9e3cec0996bb2a4f98a04c2"
                 .parse()
                 .unwrap(),
-            value: Wei::from(10_000_000_000_000_000_u128),
-            principal: Principal::from_str("2chl6-4hpzw-vqaaa-aaaaa-c").unwrap(),
+            to_address: "0x29469395eaf6f95920e59f858042f0e28d98a20b"
+                .parse()
+                .unwrap(),
+            token_id: 7177,
         };
 
         assert_eq!(parsed_event, expected_event);
@@ -145,7 +148,7 @@ mod eth_get_logs {
 
     #[test]
     fn should_not_parse_removed_event() {
-        use crate::eth_logs::{EventSource, EventSourceError, ReceivedEthEventError};
+        use crate::eth_logs::{EventSource, EventSourceError, TransferEventError};
         let event = r#"{
             "address": "0xb44b5e756a894775fc32eddf3314bb1b1944dc34",
             "topics": [
@@ -163,8 +166,8 @@ mod eth_get_logs {
         }"#;
 
         let parsed_event =
-            ReceivedEthEvent::try_from(serde_json::from_str::<LogEntry>(event).unwrap());
-        let expected_error = Err(ReceivedEthEventError::InvalidEventSource {
+            TransferEvent::try_from(serde_json::from_str::<LogEntry>(event).unwrap());
+        let expected_error = Err(TransferEventError::InvalidEventSource {
             source: EventSource {
                 transaction_hash:
                     "0x705f826861c802b407843e99af986cfde8749b669e5e0a5a150f4350bcaa9bc3"

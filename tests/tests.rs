@@ -182,7 +182,7 @@ fn should_block_deposit_from_blocked_address() {
             ..Default::default()
         })
         .expect_no_mint()
-        .assert_has_unique_events_in_order(&vec![EventPayload::InvalidDeposit {
+        .assert_has_unique_events_in_order(&vec![EventPayload::InvalidTransfer {
             event_source: EventSource {
                 transaction_hash: DEFAULT_DEPOSIT_TRANSACTION_HASH.to_string(),
                 log_index: Nat::from(DEFAULT_DEPOSIT_LOG_INDEX),
@@ -1779,7 +1779,7 @@ impl DepositFlow {
         let events = self.setup.get_all_events();
         assert_contains_unique_event(
             &events,
-            EventPayload::AcceptedDeposit {
+            EventPayload::AcceptedTransfer {
                 transaction_hash: DEFAULT_DEPOSIT_TRANSACTION_HASH.to_string(),
                 block_number: Nat::from(DEFAULT_DEPOSIT_BLOCK_NUMBER),
                 log_index: Nat::from(DEFAULT_DEPOSIT_LOG_INDEX),
@@ -1790,7 +1790,7 @@ impl DepositFlow {
         );
         assert_contains_unique_event(
             &events,
-            EventPayload::MintedCkEth {
+            EventPayload::MintedNft {
                 event_source: EventSource {
                     transaction_hash: DEFAULT_DEPOSIT_TRANSACTION_HASH.to_string(),
                     log_index: Nat::from(DEFAULT_DEPOSIT_LOG_INDEX),

@@ -1,5 +1,5 @@
 use crate::address::Address;
-use crate::eth_logs::{EventSource, ReceivedEthEvent};
+use crate::eth_logs::{EventSource, TransferEvent};
 use crate::eth_rpc::BlockTag;
 use crate::eth_rpc_client::responses::{TransactionReceipt, TransactionStatus};
 use crate::lifecycle::upgrade::UpgradeArg;
@@ -7,6 +7,7 @@ use crate::lifecycle::EthereumNetwork;
 use crate::logs::DEBUG;
 use crate::numeric::{BlockNumber, LedgerBurnIndex, LedgerMintIndex, TransactionNonce, Wei};
 use candid::Principal;
+use ethnum::u256;
 use ic_canister_log::log;
 use ic_cdk::api::management_canister::ecdsa::EcdsaPublicKeyResponse;
 use ic_crypto_ecdsa_secp256k1::PublicKey;
@@ -28,13 +29,12 @@ thread_local! {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MintedEvent {
-    pub deposit_event: ReceivedEthEvent,
-    pub mint_block_index: LedgerMintIndex,
+    pub transfer_event: TransferEvent,
 }
 
 impl MintedEvent {
     pub fn source(&self) -> EventSource {
-        self.deposit_event.source()
+        self.transfer_event.source()
     }
 }
 
@@ -50,7 +50,7 @@ pub struct State {
     pub first_scraped_block_number: BlockNumber,
     pub last_scraped_block_number: BlockNumber,
     pub last_observed_block_number: Option<BlockNumber>,
-    pub events_to_mint: BTreeMap<EventSource, ReceivedEthEvent>,
+    pub events_to_mint: BTreeMap<EventSource, TransferEvent>,
     pub minted_events: BTreeMap<EventSource, MintedEvent>,
     pub invalid_events: BTreeMap<EventSource, String>,
     pub eth_transactions: EthTransactions,
@@ -117,7 +117,7 @@ impl State {
         Some(Address::from_pubkey(&pubkey))
     }
 
-    fn record_event_to_mint(&mut self, event: &ReceivedEthEvent) {
+    fn record_event_to_mint(&mut self, event: &TransferEvent) {
         let event_source = event.source();
         assert!(
             !self.events_to_mint.contains_key(&event_source),
@@ -127,8 +127,6 @@ impl State {
         assert!(!self.invalid_events.contains_key(&event_source));
 
         self.events_to_mint.insert(event_source, event.clone());
-
-        self.update_eth_balance_upon_deposit(event)
     }
 
     pub fn has_events_to_mint(&self) -> bool {
@@ -154,24 +152,19 @@ impl State {
         }
     }
 
-    fn record_successful_mint(&mut self, source: EventSource, mint_block_index: LedgerMintIndex) {
+    fn record_successful_mint(&mut self, source: EventSource) {
         assert!(
             !self.invalid_events.contains_key(&source),
             "attempted to mint an event previously marked as invalid {source:?}"
         );
-        let deposit_event = match self.events_to_mint.remove(&source) {
+        let transfer_event = match self.events_to_mint.remove(&source) {
             Some(event) => event,
             None => panic!("attempted to mint ckETH for an unknown event {source:?}"),
         };
 
         assert_eq!(
-            self.minted_events.insert(
-                source,
-                MintedEvent {
-                    deposit_event,
-                    mint_block_index
-                }
-            ),
+            self.minted_events
+                .insert(source, MintedEvent { transfer_event }),
             None,
             "attempted to mint ckETH twice for the same event {source:?}"
         );
@@ -193,10 +186,6 @@ impl State {
         // requests and responses in logs.
         self.http_request_counter = self.http_request_counter.wrapping_add(1);
         current_request_id
-    }
-
-    fn update_eth_balance_upon_deposit(&mut self, event: &ReceivedEthEvent) {
-        self.eth_balance.eth_balance_add(event.value);
     }
 
     fn update_eth_balance_upon_withdrawal(

@@ -1,9 +1,10 @@
-use crate::eth_logs::{EventSource, ReceivedEthEvent};
+use crate::eth_logs::{EventSource, TransferEvent};
 use crate::eth_rpc_client::responses::TransactionReceipt;
 use crate::lifecycle::{init::InitArg, upgrade::UpgradeArg};
-use crate::numeric::{BlockNumber, LedgerBurnIndex, LedgerMintIndex};
+use crate::numeric::{BlockNumber, LedgerBurnIndex};
 use crate::state::transactions::{EthWithdrawalRequest, Reimbursed};
 use crate::tx::{Eip1559TransactionRequest, SignedEip1559TransactionRequest};
+use ethnum::u256;
 use minicbor::{Decode, Encode};
 
 /// The event describing the ckETH minter state transition.
@@ -18,10 +19,10 @@ pub enum EventType {
     Upgrade(#[n(0)] UpgradeArg),
     /// The minter discovered a ckETH deposit in the helper contract logs.
     #[n(2)]
-    AcceptedDeposit(#[n(0)] ReceivedEthEvent),
+    AcceptedTransfer(#[n(0)] TransferEvent),
     /// The minter discovered an invalid ckETH deposit in the helper contract logs.
     #[n(4)]
-    InvalidDeposit {
+    InvalidTransfer {
         /// The unique identifier of the deposit on the Ethereum network.
         #[n(0)]
         event_source: EventSource,
@@ -31,13 +32,10 @@ pub enum EventType {
     },
     /// The minter minted ckETH in response to a deposit.
     #[n(5)]
-    MintedCkEth {
+    MintedNft {
         /// The unique identifier of the deposit on the Ethereum network.
         #[n(0)]
         event_source: EventSource,
-        /// The transaction index on the ckETH ledger.
-        #[cbor(n(1), with = "crate::cbor::id")]
-        mint_block_index: LedgerMintIndex,
     },
     /// The minter processed the helper smart contract logs up to the specified height.
     #[n(6)]
