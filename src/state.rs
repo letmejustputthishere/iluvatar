@@ -5,9 +5,9 @@ use crate::eth_rpc_client::responses::{TransactionReceipt, TransactionStatus};
 use crate::lifecycle::upgrade::UpgradeArg;
 use crate::lifecycle::EthereumNetwork;
 use crate::logs::DEBUG;
-use crate::numeric::{BlockNumber, LedgerBurnIndex, LedgerMintIndex, TransactionNonce, Wei};
+use crate::numeric::{BlockNumber, LedgerBurnIndex, TransactionNonce, Wei};
 use candid::Principal;
-use ethnum::u256;
+
 use ic_canister_log::log;
 use ic_cdk::api::management_canister::ecdsa::EcdsaPublicKeyResponse;
 use ic_crypto_ecdsa_secp256k1::PublicKey;
@@ -395,15 +395,6 @@ impl Default for EthBalance {
 }
 
 impl EthBalance {
-    fn eth_balance_add(&mut self, value: Wei) {
-        self.eth_balance = self.eth_balance.checked_add(value).unwrap_or_else(|| {
-            panic!(
-                "BUG: overflow when adding {} to {}",
-                value, self.eth_balance
-            )
-        })
-    }
-
     fn eth_balance_sub(&mut self, value: Wei) {
         self.eth_balance = self.eth_balance.checked_sub(value).unwrap_or_else(|| {
             panic!(

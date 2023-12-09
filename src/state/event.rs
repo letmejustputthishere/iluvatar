@@ -4,7 +4,7 @@ use crate::lifecycle::{init::InitArg, upgrade::UpgradeArg};
 use crate::numeric::{BlockNumber, LedgerBurnIndex};
 use crate::state::transactions::{EthWithdrawalRequest, Reimbursed};
 use crate::tx::{Eip1559TransactionRequest, SignedEip1559TransactionRequest};
-use ethnum::u256;
+
 use minicbor::{Decode, Encode};
 
 /// The event describing the ckETH minter state transition.

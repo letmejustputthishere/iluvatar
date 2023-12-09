@@ -7,8 +7,7 @@ use crate::eth_rpc_client::{EthRpcClient, MultiCallError};
 use crate::logs::{DEBUG, INFO};
 use crate::numeric::{BlockNumber, LogIndex, TokenId};
 use crate::state::read_state;
-use candid::Principal;
-use ethnum::u256;
+
 use hex_literal::hex;
 use ic_canister_log::log;
 use minicbor::{Decode, Encode};
@@ -208,51 +207,4 @@ impl TryFrom<LogEntry> for TransferEvent {
             token_id,
         })
     }
-}
-
-/// Decode a candid::Principal from a slice of at most 32 bytes
-/// encoded as follows
-/// - the first byte is the number of bytes in the principal
-/// - the next N bytes are the principal
-/// - the remaining bytes are zero
-///
-/// Any other encoding will return an error.
-/// Some specific valid [`Principal`]s are also not allowed
-/// since the decoded principal will be used to receive ckETH:
-/// * the management canister principal
-/// * the anonymous principal
-///
-/// This method MUST never panic (decode bytes from untrusted sources).
-fn parse_principal_from_slice(slice: &[u8]) -> Result<Principal, String> {
-    const ANONYMOUS_PRINCIPAL_BYTES: [u8; 1] = [4];
-
-    if slice.is_empty() {
-        return Err("slice too short".to_string());
-    }
-    if slice.len() > 32 {
-        return Err(format!("Expected at most 32 bytes, got {}", slice.len()));
-    }
-    let num_bytes = slice[0] as usize;
-    if num_bytes == 0 {
-        return Err("management canister principal is not allowed".to_string());
-    }
-    if num_bytes > 29 {
-        return Err(format!(
-            "invalid number of bytes: expected a number in the range [1,29], got {num_bytes}",
-        ));
-    }
-    if slice.len() < 1 + num_bytes {
-        return Err("slice too short".to_string());
-    }
-    let (principal_bytes, trailing_zeroes) = slice[1..].split_at(num_bytes);
-    if !trailing_zeroes
-        .iter()
-        .all(|trailing_zero| *trailing_zero == 0)
-    {
-        return Err("trailing non-zero bytes".to_string());
-    }
-    if principal_bytes == ANONYMOUS_PRINCIPAL_BYTES {
-        return Err("anonymous principal is not allowed".to_string());
-    }
-    Principal::try_from_slice(principal_bytes).map_err(|err| err.to_string())
 }

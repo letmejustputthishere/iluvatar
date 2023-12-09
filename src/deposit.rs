@@ -4,18 +4,18 @@ use crate::eth_rpc::{BlockSpec, HttpOutcallError};
 use crate::eth_rpc_client::EthRpcClient;
 use crate::guard::TimerGuard;
 use crate::logs::{DEBUG, INFO};
-use crate::numeric::{BlockNumber, LedgerMintIndex};
+use crate::numeric::{BlockNumber};
 use crate::state::{
     audit::process_event, event::EventType, mutate_state, read_state, State, TaskType,
 };
 use ic_canister_log::log;
-use num_traits::ToPrimitive;
+
 use std::cmp::{min, Ordering};
 use std::time::Duration;
 
 async fn mint_cketh() {
     use icrc_ledger_client_cdk::{CdkRuntime, ICRC1Client};
-    use icrc_ledger_types::icrc1::transfer::TransferArg;
+    
 
     let _guard = match TimerGuard::new(TaskType::MintCkEth) {
         Ok(guard) => guard,
@@ -23,12 +23,12 @@ async fn mint_cketh() {
     };
 
     let (ledger_canister_id, events) = read_state(|s| (s.ledger_id, s.events_to_mint.clone()));
-    let client = ICRC1Client {
+    let _client = ICRC1Client {
         runtime: CdkRuntime,
         ledger_canister_id,
     };
 
-    let mut error_count = 0;
+    let error_count = 0;
 
     for (event_source, event) in events {
         // let block_index = match client
