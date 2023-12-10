@@ -14,7 +14,7 @@ use std::cmp::{min, Ordering};
 use std::time::Duration;
 
 async fn mint_cketh() {
-    use icrc_ledger_client_cdk::{CdkRuntime, ICRC1Client};
+    
 
     let _guard = match TimerGuard::new(TaskType::MintCkEth) {
         Ok(guard) => guard,

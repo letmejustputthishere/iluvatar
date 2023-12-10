@@ -34,9 +34,9 @@ impl TryFrom<InitArg> for State {
     fn try_from(
         InitArg {
             ethereum_network,
-            ecdsa_key_name,
+            ecdsa_key_name: _,
             ethereum_contract_address,
-            ledger_id,
+            ledger_id: _,
             ethereum_block_height,
             minimum_withdrawal_amount,
             next_transaction_nonce,
@@ -45,9 +45,9 @@ impl TryFrom<InitArg> for State {
     ) -> Result<Self, Self::Error> {
         use std::str::FromStr;
 
-        let initial_nonce = TransactionNonce::try_from(next_transaction_nonce)
+        let _initial_nonce = TransactionNonce::try_from(next_transaction_nonce)
             .map_err(|e| InvalidStateError::InvalidTransactionNonce(format!("ERROR: {}", e)))?;
-        let minimum_withdrawal_amount = Wei::try_from(minimum_withdrawal_amount).map_err(|e| {
+        let _minimum_withdrawal_amount = Wei::try_from(minimum_withdrawal_amount).map_err(|e| {
             InvalidStateError::InvalidMinimumWithdrawalAmount(format!("ERROR: {}", e))
         })?;
         let ethereum_contract_address = ethereum_contract_address

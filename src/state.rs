@@ -1,14 +1,14 @@
 use crate::address::Address;
 use crate::eth_logs::{EventSource, TransferEvent};
 use crate::eth_rpc::BlockTag;
-use crate::eth_rpc_client::responses::{TransactionReceipt, TransactionStatus};
+
 use crate::lifecycle::upgrade::UpgradeArg;
 use crate::lifecycle::EthereumNetwork;
-use crate::numeric::{BlockNumber, LedgerBurnIndex, TransactionNonce, Wei};
-use candid::Principal;
+use crate::numeric::{BlockNumber, Wei};
 
-use ic_cdk::api::management_canister::ecdsa::EcdsaPublicKeyResponse;
-use ic_crypto_ecdsa_secp256k1::PublicKey;
+
+
+
 use std::cell::RefCell;
 use std::collections::{btree_map, BTreeMap, BTreeSet, HashSet};
 use strum_macros::EnumIter;

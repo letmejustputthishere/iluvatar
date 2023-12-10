@@ -1,7 +1,7 @@
 use crate::eth_logs::{EventSource, TransferEvent};
-use crate::eth_rpc_client::responses::TransactionReceipt;
+
 use crate::lifecycle::{init::InitArg, upgrade::UpgradeArg};
-use crate::numeric::{BlockNumber, LedgerBurnIndex};
+use crate::numeric::{BlockNumber};
 
 use minicbor::{Decode, Encode};
 
