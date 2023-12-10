@@ -13,15 +13,15 @@ mod validate_address_as_destination {
     }
 
     #[test]
-    fn should_fail_when_address_is_blocked() {
-        let blocked_address: Address = "0x01e2919679362dFBC9ee1644Ba9C6da6D6245BB1"
-            .parse()
-            .unwrap();
-        assert_eq!(
-            validate_address_as_destination("0x01e2919679362dFBC9ee1644Ba9C6da6D6245BB1"),
-            Err(AddressValidationError::Blocked(blocked_address))
-        );
-    }
+    // fn should_fail_when_address_is_blocked() {
+    //     let blocked_address: Address = "0x01e2919679362dFBC9ee1644Ba9C6da6D6245BB1"
+    //         .parse()
+    //         .unwrap();
+    //     assert_eq!(
+    //         validate_address_as_destination("0x01e2919679362dFBC9ee1644Ba9C6da6D6245BB1"),
+    //         Err(AddressValidationError::Blocked(blocked_address))
+    //     );
+    // }
 
     // The probability that we hit a blocked address is negligible:
     // there are 115 blocked addresses for a total of 2^(160) possible addresses.

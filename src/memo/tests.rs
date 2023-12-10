@@ -72,7 +72,7 @@ mod decode_memo {
             log_index: LogIndex::from(39_u8),
             from_address,
             to_address,
-            token_id: ethnum::u256::from_str_hex("1c09"),
+            token_id: TokenId::from_str_hex("0x1c09"),
         };
         let memo: Memo = event.into();
 

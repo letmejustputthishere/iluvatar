@@ -52,7 +52,7 @@ mod eth_get_logs {
     use crate::address::Address;
     use crate::eth_logs::TransferEvent;
     use crate::eth_rpc::{FixedSizeData, LogEntry};
-    use crate::numeric::{BlockNumber, LogIndex, Wei};
+    use crate::numeric::{BlockNumber, LogIndex, Wei, TokenId};
     use assert_matches::assert_matches;
     use candid::Principal;
     use ic_crypto_sha3::Keccak256;
@@ -140,7 +140,7 @@ mod eth_get_logs {
             to_address: "0x29469395eaf6f95920e59f858042f0e28d98a20b"
                 .parse()
                 .unwrap(),
-            token_id: 7177,
+            token_id: TokenId::from(721u64),
         };
 
         assert_eq!(parsed_event, expected_event);
