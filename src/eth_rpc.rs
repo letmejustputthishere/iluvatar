@@ -3,9 +3,8 @@
 
 use crate::address::Address;
 use crate::endpoints::CandidBlockTag;
-use crate::eth_rpc_client::responses::TransactionReceipt;
 use crate::logs::{DEBUG, TRACE_HTTP};
-use crate::numeric::{BlockNumber, LogIndex, TransactionCount, Wei, WeiPerGas};
+use crate::numeric::{BlockNumber, LogIndex, TransactionCount, Wei};
 use crate::state::{mutate_state, State};
 use candid::{candid_method, CandidType, Principal};
 use ethnum;

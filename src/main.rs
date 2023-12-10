@@ -9,6 +9,7 @@ use ic_cketh_minter::endpoints::events::{
 };
 
 use ic_cketh_minter::eth_logs::{EventSource, TransferEvent};
+use ic_cketh_minter::eth_rpc::into_nat;
 use ic_cketh_minter::lifecycle::MinterArg;
 use ic_cketh_minter::logs::INFO;
 
@@ -132,7 +133,7 @@ fn get_events(arg: GetEventsArg) -> GetEventsResult {
                     log_index: log_index.into(),
                     from_address: from_address.to_string(),
                     to_address: to_address.to_string(),
-                    token_id: token_id.into(),
+                    token_id: into_nat(token_id),
                 },
                 EventType::InvalidTransfer {
                     event_source,

@@ -2,12 +2,13 @@
 mod tests;
 
 use crate::address::Address;
-use crate::eth_rpc::{FixedSizeData, Hash, LogEntry};
+use crate::eth_rpc::{FixedSizeData, Hash, LogEntry, Quantity};
 use crate::eth_rpc_client::{EthRpcClient, MultiCallError};
 use crate::logs::{DEBUG, INFO};
-use crate::numeric::{BlockNumber, LogIndex, TokenId};
+use crate::numeric::{BlockNumber, LogIndex};
 use crate::state::read_state;
 
+use ethnum::u256;
 use hex_literal::hex;
 use ic_canister_log::log;
 use minicbor::{Decode, Encode};
@@ -29,8 +30,8 @@ pub struct TransferEvent {
     pub from_address: Address,
     #[n(4)]
     pub to_address: Address,
-    #[n(5)]
-    pub token_id: TokenId,
+    #[cbor(n(5), with = "crate::cbor::u256")]
+    pub token_id: u256,
 }
 
 impl fmt::Debug for TransferEvent {
@@ -196,7 +197,7 @@ impl TryFrom<LogEntry> for TransferEvent {
             }
         })?;
         // TODO: check that the token id is a valid u256
-        let token_id = TokenId::from_be_bytes(entry.topics[3].0);
+        let token_id = u256::from_be_bytes(entry.topics[3].0);
 
         Ok(TransferEvent {
             transaction_hash,

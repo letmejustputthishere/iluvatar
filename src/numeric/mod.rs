@@ -41,9 +41,6 @@ pub enum GasUnit {}
 /// The number of gas units attached to a transaction for execution.
 pub type GasAmount = CheckedAmountOf<GasUnit>;
 
-pub enum Token {}
-pub type TokenId = CheckedAmountOf<Token>;
-
 pub enum EthLogIndexTag {}
 pub type LogIndex = CheckedAmountOf<EthLogIndexTag>;
 pub enum BurnIndexTag {}
