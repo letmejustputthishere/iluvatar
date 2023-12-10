@@ -18,7 +18,6 @@ mod serde_data;
 pub mod state;
 pub mod storage;
 pub mod tx;
-pub mod withdraw;
 
 #[cfg(test)]
 mod tests;
