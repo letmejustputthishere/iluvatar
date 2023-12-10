@@ -6,9 +6,6 @@ use crate::lifecycle::upgrade::UpgradeArg;
 use crate::lifecycle::EthereumNetwork;
 use crate::numeric::{BlockNumber, Wei};
 
-
-
-
 use std::cell::RefCell;
 use std::collections::{btree_map, BTreeMap, BTreeSet, HashSet};
 use strum_macros::EnumIter;
@@ -223,78 +220,6 @@ where
             .as_mut()
             .expect("BUG: state is not initialized"))
     })
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct EthBalance {
-    /// Amount of ETH controlled by the minter's address via tECDSA.
-    /// Note that invalid deposits are not accounted for and so so this value
-    /// might be less than what is displayed by Etherscan
-    /// or retrieved by the JSON-RPC call `eth_getBalance`.
-    /// Also some transactions may have gone directly to the minter's address
-    /// without going via the helper smart contract.
-    eth_balance: Wei,
-    /// Total amount of fees across all finalized transactions ckETH -> ETH.
-    total_effective_tx_fees: Wei,
-    /// Total amount of fees that were charged to the user during the withdrawal
-    /// but not consumed by the finalized transaction ckETH -> ETH
-    total_unspent_tx_fees: Wei,
-}
-
-impl Default for EthBalance {
-    fn default() -> Self {
-        Self {
-            eth_balance: Wei::ZERO,
-            total_effective_tx_fees: Wei::ZERO,
-            total_unspent_tx_fees: Wei::ZERO,
-        }
-    }
-}
-
-impl EthBalance {
-    fn eth_balance_sub(&mut self, value: Wei) {
-        self.eth_balance = self.eth_balance.checked_sub(value).unwrap_or_else(|| {
-            panic!(
-                "BUG: underflow when subtracting {} from {}",
-                value, self.eth_balance
-            )
-        })
-    }
-
-    fn total_effective_tx_fees_add(&mut self, value: Wei) {
-        self.total_effective_tx_fees = self
-            .total_effective_tx_fees
-            .checked_add(value)
-            .unwrap_or_else(|| {
-                panic!(
-                    "BUG: overflow when adding {} to {}",
-                    value, self.total_effective_tx_fees
-                )
-            })
-    }
-
-    fn total_unspent_tx_fees_add(&mut self, value: Wei) {
-        self.total_unspent_tx_fees = self
-            .total_unspent_tx_fees
-            .checked_add(value)
-            .unwrap_or_else(|| {
-                panic!(
-                    "BUG: overflow when adding {} to {}",
-                    value, self.total_unspent_tx_fees
-                )
-            })
-    }
-
-    pub fn eth_balance(&self) -> Wei {
-        self.eth_balance
-    }
-    pub fn total_effective_tx_fees(&self) -> Wei {
-        self.total_effective_tx_fees
-    }
-
-    pub fn total_unspent_tx_fees(&self) -> Wei {
-        self.total_unspent_tx_fees
-    }
 }
 
 #[derive(Debug, Hash, Copy, Clone, PartialEq, Eq, EnumIter)]
