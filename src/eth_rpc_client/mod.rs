@@ -4,11 +4,11 @@ use crate::eth_rpc::{
     ResponseSizeEstimate,
 };
 use crate::eth_rpc_client::providers::{RpcNodeProvider, MAINNET_PROVIDERS, SEPOLIA_PROVIDERS};
-use crate::eth_rpc_client::requests::GetTransactionCountParams;
+
 use crate::eth_rpc_client::responses::TransactionReceipt;
 use crate::lifecycle::EthereumNetwork;
 use crate::logs::{DEBUG, INFO};
-use crate::numeric::TransactionCount;
+
 use crate::state::State;
 use ic_canister_log::log;
 use serde::{de::DeserializeOwned, Serialize};

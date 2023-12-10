@@ -4,7 +4,7 @@
 use crate::address::Address;
 use crate::endpoints::CandidBlockTag;
 use crate::eth_rpc_client::responses::TransactionReceipt;
-use crate::eth_rpc_error::Parser;
+
 use crate::logs::{DEBUG, TRACE_HTTP};
 use crate::numeric::{BlockNumber, LogIndex, TransactionCount, Wei, WeiPerGas};
 use crate::state::{mutate_state, State};

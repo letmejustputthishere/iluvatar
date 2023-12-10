@@ -1,6 +1,6 @@
-use crate::eth_rpc::{Hash, JsonRpcReply, JsonRpcResult};
-use crate::logs::DEBUG;
-use ic_canister_log::log;
+use crate::eth_rpc::{JsonRpcResult};
+
+
 
 #[cfg(test)]
 mod tests;
