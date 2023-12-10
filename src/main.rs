@@ -1,39 +1,25 @@
-use candid::{candid_method, Nat};
+use candid::candid_method;
 use ic_canister_log::log;
 use ic_canisters_http_types::{HttpRequest, HttpResponse, HttpResponseBuilder};
 use ic_cdk_macros::{init, post_upgrade, pre_upgrade, query, update};
-use ic_cketh_minter::address::{validate_address_as_destination, AddressValidationError};
+
 use ic_cketh_minter::deposit::scrap_eth_logs;
 use ic_cketh_minter::endpoints::events::{
     Event as CandidEvent, EventSource as CandidEventSource, GetEventsArg, GetEventsResult,
 };
-use ic_cketh_minter::endpoints::{
-    RetrieveEthRequest, RetrieveEthStatus, WithdrawalArg, WithdrawalError,
-};
+
 use ic_cketh_minter::eth_logs::{EventSource, TransferEvent};
 use ic_cketh_minter::lifecycle::MinterArg;
-use ic_cketh_minter::logs::{DEBUG, INFO};
-use ic_cketh_minter::memo::BurnMemo;
-use ic_cketh_minter::numeric::{LedgerBurnIndex, Wei};
-use ic_cketh_minter::state::audit::{process_event, Event, EventType};
-use ic_cketh_minter::state::{mutate_state, read_state, State, STATE};
-use ic_cketh_minter::{state, storage, SCRAPPING_ETH_LOGS_INTERVAL};
-use icrc_ledger_client_cdk::{CdkRuntime, ICRC1Client};
-use icrc_ledger_types::icrc1::transfer::Memo;
-use icrc_ledger_types::icrc2::transfer_from::TransferFromArgs;
-use num_traits::cast::ToPrimitive;
+use ic_cketh_minter::logs::INFO;
+
+use ic_cketh_minter::state::audit::{Event, EventType};
+use ic_cketh_minter::state::{read_state, State, STATE};
+use ic_cketh_minter::{storage, SCRAPPING_ETH_LOGS_INTERVAL};
+
 use std::time::Duration;
 
 mod dashboard;
 pub const SEPOLIA_TEST_CHAIN_ID: u64 = 11155111;
-
-fn validate_caller_not_anonymous() -> candid::Principal {
-    let principal = ic_cdk::caller();
-    if principal == candid::Principal::anonymous() {
-        panic!("anonymous principal is not allowed");
-    }
-    principal
-}
 
 fn setup_timers() {
     // Start scraping logs immediately after the install, then repeat with the interval.
@@ -112,13 +98,6 @@ async fn get_canister_status() -> ic_cdk::api::management_canister::main::Canist
 #[query]
 #[candid_method(query)]
 fn get_events(arg: GetEventsArg) -> GetEventsResult {
-    use ic_cketh_minter::endpoints::events::{
-        AccessListItem, TransactionReceipt as CandidTransactionReceipt,
-        TransactionStatus as CandidTransactionStatus, UnsignedTransaction,
-    };
-    use ic_cketh_minter::eth_rpc_client::responses::TransactionReceipt;
-    use serde_bytes::ByteBuf;
-
     const MAX_EVENTS_PER_RESPONSE: u64 = 100;
 
     fn map_event_source(
@@ -130,21 +109,6 @@ fn get_events(arg: GetEventsArg) -> GetEventsResult {
         CandidEventSource {
             transaction_hash: transaction_hash.to_string(),
             log_index: log_index.into(),
-        }
-    }
-
-    fn map_transaction_receipt(receipt: TransactionReceipt) -> CandidTransactionReceipt {
-        use ic_cketh_minter::eth_rpc_client::responses::TransactionStatus;
-        CandidTransactionReceipt {
-            block_hash: receipt.block_hash.to_string(),
-            block_number: receipt.block_number.into(),
-            effective_gas_price: receipt.effective_gas_price.into(),
-            gas_used: receipt.gas_used.into(),
-            status: match receipt.status {
-                TransactionStatus::Success => CandidTransactionStatus::Success,
-                TransactionStatus::Failure => CandidTransactionStatus::Failure,
-            },
-            transaction_hash: receipt.transaction_hash.to_string(),
         }
     }
 

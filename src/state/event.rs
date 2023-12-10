@@ -1,7 +1,7 @@
 use crate::eth_logs::{EventSource, TransferEvent};
 
 use crate::lifecycle::{init::InitArg, upgrade::UpgradeArg};
-use crate::numeric::{BlockNumber};
+use crate::numeric::BlockNumber;
 
 use minicbor::{Decode, Encode};
 

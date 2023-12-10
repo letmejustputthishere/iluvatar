@@ -4,7 +4,7 @@ use crate::eth_rpc::BlockTag;
 
 use crate::lifecycle::upgrade::UpgradeArg;
 use crate::lifecycle::EthereumNetwork;
-use crate::numeric::{BlockNumber, Wei};
+use crate::numeric::BlockNumber;
 
 use std::cell::RefCell;
 use std::collections::{btree_map, BTreeMap, BTreeSet, HashSet};
