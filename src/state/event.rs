@@ -2,8 +2,6 @@ use crate::eth_logs::{EventSource, TransferEvent};
 use crate::eth_rpc_client::responses::TransactionReceipt;
 use crate::lifecycle::{init::InitArg, upgrade::UpgradeArg};
 use crate::numeric::{BlockNumber, LedgerBurnIndex};
-use crate::state::transactions::{EthWithdrawalRequest, Reimbursed};
-use crate::tx::{Eip1559TransactionRequest, SignedEip1559TransactionRequest};
 
 use minicbor::{Decode, Encode};
 
@@ -44,50 +42,6 @@ pub enum EventType {
         #[n(0)]
         block_number: BlockNumber,
     },
-    /// The minter accepted a new ETH withdrawal request.
-    #[n(7)]
-    AcceptedEthWithdrawalRequest(#[n(0)] EthWithdrawalRequest),
-    /// The minter created a new transaction to handle a withdrawal request.
-    #[n(8)]
-    CreatedTransaction {
-        #[cbor(n(0), with = "crate::cbor::id")]
-        withdrawal_id: LedgerBurnIndex,
-        #[n(1)]
-        transaction: Eip1559TransactionRequest,
-    },
-    /// The minter signed a transaction.
-    #[n(9)]
-    SignedTransaction {
-        /// The withdrawal identifier.
-        #[cbor(n(0), with = "crate::cbor::id")]
-        withdrawal_id: LedgerBurnIndex,
-        /// The signed transaction.
-        #[n(1)]
-        transaction: SignedEip1559TransactionRequest,
-    },
-    /// The minter created a new transaction to handle an existing withdrawal request.
-    #[n(10)]
-    ReplacedTransaction {
-        /// The withdrawal identifier.
-        #[cbor(n(0), with = "crate::cbor::id")]
-        withdrawal_id: LedgerBurnIndex,
-        /// The replacement transaction.
-        #[n(1)]
-        transaction: Eip1559TransactionRequest,
-    },
-    /// The minter observed the transaction being included in a finalized Ethereum block.
-    #[n(11)]
-    FinalizedTransaction {
-        /// The withdrawal identifier.
-        #[cbor(n(0), with = "crate::cbor::id")]
-        withdrawal_id: LedgerBurnIndex,
-        /// The receipt for the finalized transaction.
-        #[n(1)]
-        transaction_receipt: TransactionReceipt,
-    },
-    /// The minter successfully reimbursed a failed withdrawal.
-    #[n(12)]
-    ReimbursedEthWithdrawal(#[n(0)] Reimbursed),
     /// The minter could not scrap the logs for that block.
     #[n(13)]
     SkippedBlock(#[n(0)] BlockNumber),

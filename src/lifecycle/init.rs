@@ -3,7 +3,6 @@ use crate::endpoints::CandidBlockTag;
 use crate::eth_rpc::BlockTag;
 use crate::lifecycle::EthereumNetwork;
 use crate::numeric::{BlockNumber, TransactionNonce, Wei};
-use crate::state::transactions::EthTransactions;
 use crate::state::{InvalidStateError, State};
 use candid::types::number::Nat;
 use candid::types::principal::Principal;
@@ -71,21 +70,14 @@ impl TryFrom<InitArg> for State {
                 })?;
         let state = Self {
             ethereum_network,
-            ecdsa_key_name,
             ethereum_contract_address,
-            retrieve_eth_principals: Default::default(),
-            eth_transactions: EthTransactions::new(initial_nonce),
-            ledger_id,
-            minimum_withdrawal_amount,
             ethereum_block_height: BlockTag::from(ethereum_block_height),
             first_scraped_block_number,
             last_scraped_block_number,
             last_observed_block_number: None,
             events_to_mint: Default::default(),
             minted_events: Default::default(),
-            ecdsa_public_key: None,
             invalid_events: Default::default(),
-            eth_balance: Default::default(),
             skipped_blocks: Default::default(),
             active_tasks: Default::default(),
             http_request_counter: 0,

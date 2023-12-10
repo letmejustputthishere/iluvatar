@@ -1,39 +1,11 @@
-use crate::state::transactions::EthWithdrawalRequest;
-use crate::tx::{SignedEip1559TransactionRequest, TransactionPrice};
 use candid::{CandidType, Deserialize, Nat};
 use icrc_ledger_types::icrc2::transfer_from::TransferFromError;
 use minicbor::{Decode, Encode};
 use std::fmt::{Display, Formatter};
 
-#[derive(CandidType, Deserialize, Clone, Debug)]
-pub struct Eip1559TransactionPrice {
-    pub gas_limit: Nat,
-    pub max_fee_per_gas: Nat,
-    pub max_priority_fee_per_gas: Nat,
-    pub max_transaction_fee: Nat,
-}
-
-impl From<TransactionPrice> for Eip1559TransactionPrice {
-    fn from(value: TransactionPrice) -> Self {
-        Self {
-            gas_limit: value.gas_limit.into(),
-            max_fee_per_gas: value.max_fee_per_gas.into(),
-            max_priority_fee_per_gas: value.max_priority_fee_per_gas.into(),
-            max_transaction_fee: value.max_transaction_fee().into(),
-        }
-    }
-}
 #[derive(CandidType, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct EthTransaction {
     pub transaction_hash: String,
-}
-
-impl From<&SignedEip1559TransactionRequest> for EthTransaction {
-    fn from(value: &SignedEip1559TransactionRequest) -> Self {
-        Self {
-            transaction_hash: value.hash().to_string(),
-        }
-    }
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug, PartialEq)]
@@ -58,14 +30,6 @@ pub enum CandidBlockTag {
     /// <https://www.alchemy.com/overviews/ethereum-commitment-levels#what-are-ethereum-commitment-levels>
     #[cbor(n(2))]
     Finalized,
-}
-
-impl From<EthWithdrawalRequest> for RetrieveEthRequest {
-    fn from(value: EthWithdrawalRequest) -> Self {
-        Self {
-            block_index: candid::Nat::from(value.ledger_burn_index.get()),
-        }
-    }
 }
 
 #[derive(CandidType, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]

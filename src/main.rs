@@ -11,14 +11,12 @@ use ic_cketh_minter::endpoints::{
     RetrieveEthRequest, RetrieveEthStatus, WithdrawalArg, WithdrawalError,
 };
 use ic_cketh_minter::eth_logs::{EventSource, TransferEvent};
-use ic_cketh_minter::guard::retrieve_eth_guard;
 use ic_cketh_minter::lifecycle::MinterArg;
 use ic_cketh_minter::logs::{DEBUG, INFO};
 use ic_cketh_minter::memo::BurnMemo;
 use ic_cketh_minter::numeric::{LedgerBurnIndex, Wei};
 use ic_cketh_minter::state::audit::{process_event, Event, EventType};
-use ic_cketh_minter::state::transactions::{EthWithdrawalRequest, Reimbursed};
-use ic_cketh_minter::state::{lazy_call_ecdsa_public_key, mutate_state, read_state, State, STATE};
+use ic_cketh_minter::state::{mutate_state, read_state, State, STATE};
 use ic_cketh_minter::{state, storage, SCRAPPING_ETH_LOGS_INTERVAL};
 use icrc_ledger_client_cdk::{CdkRuntime, ICRC1Client};
 use icrc_ledger_types::icrc1::transfer::Memo;
@@ -38,12 +36,6 @@ fn validate_caller_not_anonymous() -> candid::Principal {
 }
 
 fn setup_timers() {
-    ic_cdk_timers::set_timer(Duration::from_secs(0), || {
-        // Initialize the minter's public key to make the address known.
-        ic_cdk::spawn(async {
-            let _ = lazy_call_ecdsa_public_key().await;
-        })
-    });
     // Start scraping logs immediately after the install, then repeat with the interval.
     ic_cdk_timers::set_timer(Duration::from_secs(0), || ic_cdk::spawn(scrap_eth_logs()));
     ic_cdk_timers::set_timer_interval(SCRAPPING_ETH_LOGS_INTERVAL, || {
@@ -96,125 +88,12 @@ fn post_upgrade(minter_arg: Option<MinterArg>) {
     setup_timers();
 }
 
-#[update]
-#[candid_method(update)]
-async fn minter_address() -> String {
-    state::minter_address().await.to_string()
-}
-
 #[query]
 #[candid_method(query)]
 async fn smart_contract_address() -> String {
     read_state(|s| s.ethereum_contract_address)
         .map(|a| a.to_string())
         .unwrap_or("N/A".to_string())
-}
-
-#[update]
-#[candid_method(update)]
-async fn withdraw_eth(
-    WithdrawalArg { amount, recipient }: WithdrawalArg,
-) -> Result<RetrieveEthRequest, WithdrawalError> {
-    let caller = validate_caller_not_anonymous();
-    let _guard = retrieve_eth_guard(caller).unwrap_or_else(|e| {
-        ic_cdk::trap(&format!(
-            "Failed retrieving guard for principal {}: {:?}",
-            caller, e
-        ))
-    });
-
-    let destination = validate_address_as_destination(&recipient)
-        .map_err(|e| match e {
-            AddressValidationError::Invalid { .. } | AddressValidationError::NotSupported(_) => {
-                ic_cdk::trap(&e.to_string())
-            }
-        })
-        .unwrap();
-
-    let amount = Wei::try_from(amount).expect("failed to convert Nat to u256");
-
-    let minimum_withdrawal_amount = read_state(|s| s.minimum_withdrawal_amount);
-    if amount < minimum_withdrawal_amount {
-        return Err(WithdrawalError::AmountTooLow {
-            min_withdrawal_amount: minimum_withdrawal_amount.into(),
-        });
-    }
-
-    let ledger_canister_id = read_state(|s| s.ledger_id);
-    let client = ICRC1Client {
-        runtime: CdkRuntime,
-        ledger_canister_id,
-    };
-
-    let now = ic_cdk::api::time();
-
-    log!(INFO, "[withdraw]: burning {:?}", amount);
-    match client
-        .transfer_from(TransferFromArgs {
-            spender_subaccount: None,
-            from: caller.into(),
-            to: ic_cdk::id().into(),
-            amount: Nat::from(amount),
-            fee: None,
-            memo: Some(Memo::from(BurnMemo::Convert {
-                to_address: destination,
-            })),
-            created_at_time: None, // We don't set this field to disable transaction deduplication
-                                   // which is unnecessary in canister-to-canister calls.
-        })
-        .await
-    {
-        Ok(Ok(block_index)) => {
-            let ledger_burn_index =
-                LedgerBurnIndex::new(block_index.0.to_u64().expect("nat does not fit into u64"));
-            let withdrawal_request = EthWithdrawalRequest {
-                withdrawal_amount: amount,
-                destination,
-                ledger_burn_index,
-                from: caller,
-                from_subaccount: None,
-                created_at: Some(now),
-            };
-
-            log!(
-                INFO,
-                "[withdraw]: queuing withdrawal request {:?}",
-                withdrawal_request,
-            );
-
-            mutate_state(|s| {
-                process_event(
-                    s,
-                    EventType::AcceptedEthWithdrawalRequest(withdrawal_request.clone()),
-                );
-            });
-            Ok(RetrieveEthRequest::from(withdrawal_request))
-        }
-        Ok(Err(error)) => {
-            log!(
-                DEBUG,
-                "[withdraw]: failed to transfer_from with error: {error:?}"
-            );
-            Err(WithdrawalError::from(error))
-        }
-        Err((error_code, message)) => {
-            log!(
-                DEBUG,
-                "[withdraw]: failed to call ledger with error_code: {error_code} and message: {message}",
-            );
-            Err(WithdrawalError::TemporarilyUnavailable(
-                "failed to call ledger with error_code: {error_code} and message: {message}"
-                    .to_string(),
-            ))
-        }
-    }
-}
-
-#[update]
-#[candid_method(update)]
-async fn retrieve_eth_status(block_index: u64) -> RetrieveEthStatus {
-    let ledger_burn_index = LedgerBurnIndex::new(block_index);
-    read_state(|s| s.eth_transactions.transaction_status(&ledger_burn_index))
 }
 
 #[candid_method(update)]
@@ -238,7 +117,6 @@ fn get_events(arg: GetEventsArg) -> GetEventsResult {
         TransactionStatus as CandidTransactionStatus, UnsignedTransaction,
     };
     use ic_cketh_minter::eth_rpc_client::responses::TransactionReceipt;
-    use ic_cketh_minter::tx::Eip1559TransactionRequest;
     use serde_bytes::ByteBuf;
 
     const MAX_EVENTS_PER_RESPONSE: u64 = 100;
@@ -252,32 +130,6 @@ fn get_events(arg: GetEventsArg) -> GetEventsResult {
         CandidEventSource {
             transaction_hash: transaction_hash.to_string(),
             log_index: log_index.into(),
-        }
-    }
-
-    fn map_unsigned_transaction(tx: Eip1559TransactionRequest) -> UnsignedTransaction {
-        UnsignedTransaction {
-            chain_id: tx.chain_id.into(),
-            nonce: tx.nonce.into(),
-            max_priority_fee_per_gas: tx.max_priority_fee_per_gas.into(),
-            max_fee_per_gas: tx.max_fee_per_gas.into(),
-            gas_limit: tx.gas_limit.into(),
-            destination: tx.destination.to_string(),
-            value: tx.amount.into(),
-            data: ByteBuf::from(tx.data),
-            access_list: tx
-                .access_list
-                .0
-                .iter()
-                .map(|item| AccessListItem {
-                    address: item.address.to_string(),
-                    storage_keys: item
-                        .storage_keys
-                        .iter()
-                        .map(|key| ByteBuf::from(key.0.to_vec()))
-                        .collect(),
-                })
-                .collect(),
         }
     }
 
@@ -330,60 +182,6 @@ fn get_events(arg: GetEventsArg) -> GetEventsResult {
                 },
                 EventType::SyncedToBlock { block_number } => EP::SyncedToBlock {
                     block_number: block_number.into(),
-                },
-                EventType::AcceptedEthWithdrawalRequest(EthWithdrawalRequest {
-                    withdrawal_amount,
-                    destination,
-                    ledger_burn_index,
-                    from,
-                    from_subaccount,
-                    created_at,
-                }) => EP::AcceptedEthWithdrawalRequest {
-                    withdrawal_amount: withdrawal_amount.into(),
-                    destination: destination.to_string(),
-                    ledger_burn_index: ledger_burn_index.get().into(),
-                    from,
-                    from_subaccount: from_subaccount.map(|s| s.0),
-                    created_at,
-                },
-                EventType::CreatedTransaction {
-                    withdrawal_id,
-                    transaction,
-                } => EP::CreatedTransaction {
-                    withdrawal_id: withdrawal_id.get().into(),
-                    transaction: map_unsigned_transaction(transaction),
-                },
-                EventType::SignedTransaction {
-                    withdrawal_id,
-                    transaction,
-                } => EP::SignedTransaction {
-                    withdrawal_id: withdrawal_id.get().into(),
-                    raw_transaction: transaction.raw_transaction_hex(),
-                },
-                EventType::ReplacedTransaction {
-                    withdrawal_id,
-                    transaction,
-                } => EP::ReplacedTransaction {
-                    withdrawal_id: withdrawal_id.get().into(),
-                    transaction: map_unsigned_transaction(transaction),
-                },
-                EventType::FinalizedTransaction {
-                    withdrawal_id,
-                    transaction_receipt,
-                } => EP::FinalizedTransaction {
-                    withdrawal_id: withdrawal_id.get().into(),
-                    transaction_receipt: map_transaction_receipt(transaction_receipt),
-                },
-                EventType::ReimbursedEthWithdrawal(Reimbursed {
-                    withdrawal_id,
-                    reimbursed_in_block,
-                    reimbursed_amount,
-                    transaction_hash,
-                }) => EP::ReimbursedEthWithdrawal {
-                    withdrawal_id: withdrawal_id.get().into(),
-                    reimbursed_in_block: reimbursed_in_block.get().into(),
-                    reimbursed_amount: reimbursed_amount.into(),
-                    transaction_hash: transaction_hash.map(|h| h.to_string()),
                 },
                 EventType::SkippedBlock(block_number) => EP::SkippedBlock {
                     block_number: block_number.into(),
@@ -463,33 +261,6 @@ fn http_request(req: HttpRequest) -> HttpResponse {
                     "cketh_event_count",
                     storage::total_event_count() as f64,
                     "Total number of events in the event log.",
-                )?;
-                w.encode_gauge(
-                    "cketh_minter_eth_balance",
-                    s.eth_balance.eth_balance().as_f64(),
-                    "Known amount of ETH on the minter's address",
-                )?;
-                w.encode_gauge(
-                    "cketh_minter_total_effective_tx_fees",
-                    s.eth_balance.total_effective_tx_fees().as_f64(),
-                    "Total amount of fees across all finalized transactions ckETH -> ETH",
-                )?;
-                w.encode_gauge(
-                    "cketh_minter_total_unspent_tx_fees",
-                    s.eth_balance.total_unspent_tx_fees().as_f64(),
-                    "Total amount of unspent fees across all finalized transaction ckETH -> ETH",
-                )?;
-
-                let now_nanos = ic_cdk::api::time();
-                let age_nanos = now_nanos.saturating_sub(
-                    s.eth_transactions
-                        .oldest_incomplete_withdrawal_timestamp()
-                        .unwrap_or(now_nanos),
-                );
-                w.encode_gauge(
-                    "cketh_oldest_incomplete_eth_withdrawal_request_age_seconds",
-                    (age_nanos / 1_000_000_000) as f64,
-                    "The age of the oldest incomplete ETH withdrawal request in seconds.",
                 )?;
 
                 ic_cketh_minter::eth_rpc::encode_metrics(w)?;

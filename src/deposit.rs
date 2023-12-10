@@ -4,7 +4,7 @@ use crate::eth_rpc::{BlockSpec, HttpOutcallError};
 use crate::eth_rpc_client::EthRpcClient;
 use crate::guard::TimerGuard;
 use crate::logs::{DEBUG, INFO};
-use crate::numeric::{BlockNumber};
+use crate::numeric::BlockNumber;
 use crate::state::{
     audit::process_event, event::EventType, mutate_state, read_state, State, TaskType,
 };
@@ -15,18 +15,13 @@ use std::time::Duration;
 
 async fn mint_cketh() {
     use icrc_ledger_client_cdk::{CdkRuntime, ICRC1Client};
-    
 
     let _guard = match TimerGuard::new(TaskType::MintCkEth) {
         Ok(guard) => guard,
         Err(_) => return,
     };
 
-    let (ledger_canister_id, events) = read_state(|s| (s.ledger_id, s.events_to_mint.clone()));
-    let _client = ICRC1Client {
-        runtime: CdkRuntime,
-        ledger_canister_id,
-    };
+    let events = read_state(|s| (s.events_to_mint.clone()));
 
     let error_count = 0;
 

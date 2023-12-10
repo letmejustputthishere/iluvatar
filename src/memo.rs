@@ -5,7 +5,6 @@ use crate::address::Address;
 use crate::eth_logs::TransferEvent;
 use crate::eth_rpc::Hash;
 use crate::numeric::LogIndex;
-use crate::state::transactions::ReimbursementRequest;
 use icrc_ledger_types::icrc1::transfer::Memo;
 use minicbor::{Decode, Encode, Encoder};
 
@@ -70,17 +69,6 @@ impl From<TransferEvent> for Memo {
             from_address: event.from_address,
             tx_hash: event.transaction_hash,
             log_index: event.log_index,
-        })
-    }
-}
-
-impl From<ReimbursementRequest> for Memo {
-    fn from(reimbursement_request: ReimbursementRequest) -> Self {
-        Memo::from(MintMemo::Reimburse {
-            withdrawal_id: reimbursement_request.withdrawal_id.get(),
-            tx_hash: reimbursement_request
-                .transaction_hash
-                .expect("A hash should be set for reimbursement memos."),
         })
     }
 }
