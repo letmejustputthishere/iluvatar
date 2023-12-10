@@ -1,7 +1,7 @@
 use crate::eth_rpc::{
     self, are_errors_consistent, Block, BlockSpec, FeeHistory, FeeHistoryParams, GetLogsParam,
     Hash, HttpOutcallError, HttpOutcallResult, HttpResponsePayload, JsonRpcResult, LogEntry,
-    ResponseSizeEstimate, SendRawTransactionResult,
+    ResponseSizeEstimate,
 };
 use crate::eth_rpc_client::providers::{RpcNodeProvider, MAINNET_PROVIDERS, SEPOLIA_PROVIDERS};
 use crate::eth_rpc_client::requests::GetTransactionCountParams;
@@ -180,32 +180,6 @@ impl EthRpcClient {
             .parallel_call("eth_feeHistory", params, ResponseSizeEstimate::new(512))
             .await;
         results.reduce_with_strict_majority_by_key(|fee_history| fee_history.oldest_block)
-    }
-
-    pub async fn eth_send_raw_transaction(
-        &self,
-        raw_signed_transaction_hex: String,
-    ) -> HttpOutcallResult<JsonRpcResult<SendRawTransactionResult>> {
-        // A successful reply is under 256 bytes, but we expect most calls to end with an error
-        // since we submit the same transaction from multiple nodes.
-        self.sequential_call_until_ok(
-            "eth_sendRawTransaction",
-            vec![raw_signed_transaction_hex],
-            ResponseSizeEstimate::new(256),
-        )
-        .await
-    }
-
-    pub async fn eth_get_transaction_count(
-        &self,
-        params: GetTransactionCountParams,
-    ) -> MultiCallResults<TransactionCount> {
-        self.parallel_call(
-            "eth_getTransactionCount",
-            params,
-            ResponseSizeEstimate::new(50),
-        )
-        .await
     }
 }
 

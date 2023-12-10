@@ -4,7 +4,7 @@
 use crate::address::Address;
 use crate::endpoints::CandidBlockTag;
 use crate::eth_rpc_client::responses::TransactionReceipt;
-use crate::eth_rpc_error::{sanitize_send_raw_transaction_result, Parser};
+use crate::eth_rpc_error::Parser;
 use crate::logs::{DEBUG, TRACE_HTTP};
 use crate::numeric::{BlockNumber, LogIndex, TransactionCount, Wei, WeiPerGas};
 use crate::state::{mutate_state, State};
@@ -101,20 +101,6 @@ impl LowerHex for FixedSizeData {
 impl UpperHex for FixedSizeData {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "0x{}", hex::encode_upper(self.0))
-    }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
-pub enum SendRawTransactionResult {
-    Ok,
-    InsufficientFunds,
-    NonceTooLow,
-    NonceTooHigh,
-}
-
-impl HttpResponsePayload for SendRawTransactionResult {
-    fn response_transform() -> Option<ResponseTransform> {
-        Some(ResponseTransform::SendRawTransaction)
     }
 }
 
@@ -438,8 +424,6 @@ pub enum ResponseTransform {
     TransactionReceipt,
     #[n(3)]
     FeeHistory,
-    #[n(4)]
-    SendRawTransaction,
 }
 
 impl ResponseTransform {
@@ -480,9 +464,6 @@ impl ResponseTransform {
             Self::LogEntries => redact_collection_response::<LogEntry>(body_bytes),
             Self::TransactionReceipt => redact_response::<TransactionReceipt>(body_bytes),
             Self::FeeHistory => redact_response::<FeeHistory>(body_bytes),
-            Self::SendRawTransaction => {
-                sanitize_send_raw_transaction_result(body_bytes, Parser::new())
-            }
         }
     }
 }

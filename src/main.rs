@@ -171,6 +171,7 @@ fn get_events(arg: GetEventsArg) -> GetEventsResult {
 fn http_request(req: HttpRequest) -> HttpResponse {
     use ic_metrics_encoder::MetricsEncoder;
 
+    // disable update calls for this method
     if ic_cdk::api::data_certificate().is_none() {
         ic_cdk::trap("update call rejected");
     }
