@@ -40,12 +40,6 @@ impl TransactionReceipt {
     }
 }
 
-impl HttpResponsePayload for TransactionReceipt {
-    fn response_transform() -> Option<ResponseTransform> {
-        Some(ResponseTransform::TransactionReceipt)
-    }
-}
-
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Eq, PartialEq, Encode, Decode)]
 #[serde(try_from = "ethnum::u256", into = "ethnum::u256")]
 pub enum TransactionStatus {

@@ -1,7 +1,6 @@
 use crate::eth_rpc::{
-    self, are_errors_consistent, Block, BlockSpec, FeeHistory, FeeHistoryParams, GetLogsParam,
-    Hash, HttpOutcallError, HttpOutcallResult, HttpResponsePayload, JsonRpcResult, LogEntry,
-    ResponseSizeEstimate,
+    self, are_errors_consistent, Block, BlockSpec, GetLogsParam, Hash, HttpOutcallError,
+    HttpOutcallResult, HttpResponsePayload, JsonRpcResult, LogEntry, ResponseSizeEstimate,
 };
 use crate::eth_rpc_client::providers::{RpcNodeProvider, MAINNET_PROVIDERS, SEPOLIA_PROVIDERS};
 
@@ -155,31 +154,6 @@ impl EthRpcClient {
             )
             .await;
         results.reduce_with_equality()
-    }
-
-    pub async fn eth_get_transaction_receipt(
-        &self,
-        tx_hash: Hash,
-    ) -> Result<Option<TransactionReceipt>, MultiCallError<Option<TransactionReceipt>>> {
-        let results: MultiCallResults<Option<TransactionReceipt>> = self
-            .parallel_call(
-                "eth_getTransactionReceipt",
-                vec![tx_hash],
-                ResponseSizeEstimate::new(700),
-            )
-            .await;
-        results.reduce_with_equality()
-    }
-
-    pub async fn eth_fee_history(
-        &self,
-        params: FeeHistoryParams,
-    ) -> Result<FeeHistory, MultiCallError<FeeHistory>> {
-        // A typical response is slightly above 300 bytes.
-        let results: MultiCallResults<FeeHistory> = self
-            .parallel_call("eth_feeHistory", params, ResponseSizeEstimate::new(512))
-            .await;
-        results.reduce_with_strict_majority_by_key(|fee_history| fee_history.oldest_block)
     }
 }
 
