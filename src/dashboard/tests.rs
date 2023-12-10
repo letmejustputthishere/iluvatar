@@ -97,8 +97,8 @@ fn should_display_events_to_mint_sorted_by_decreasing_block_number() {
                 .unwrap(),
             ..received_eth_event()
         };
-        apply_state_transition(&mut state, &EventType::AcceptedTransfer(event_1));
-        apply_state_transition(&mut state, &EventType::AcceptedTransfer(event_2));
+        apply_state_transition(&mut state, &EventType::AcceptedMint(event_1));
+        apply_state_transition(&mut state, &EventType::AcceptedMint(event_2));
         DashboardTemplate::from_state(&state)
     };
 
@@ -147,8 +147,8 @@ fn should_display_minted_events_sorted_by_decreasing_mint_block_index() {
                 .unwrap(),
             ..received_eth_event()
         };
-        apply_state_transition(&mut state, &EventType::AcceptedTransfer(event_1.clone()));
-        apply_state_transition(&mut state, &EventType::AcceptedTransfer(event_2.clone()));
+        apply_state_transition(&mut state, &EventType::AcceptedMint(event_1.clone()));
+        apply_state_transition(&mut state, &EventType::AcceptedMint(event_2.clone()));
         apply_state_transition(
             &mut state,
             &EventType::MintedNft {
@@ -366,7 +366,7 @@ fn should_display_finalized_transactions_sorted_by_decreasing_ledger_burn_index(
     let dashboard = {
         let mut state = initial_state();
         let deposit = received_eth_event();
-        apply_state_transition(&mut state, &EventType::AcceptedTransfer(deposit.clone()));
+        apply_state_transition(&mut state, &EventType::AcceptedMint(deposit.clone()));
         apply_state_transition(
             &mut state,
             &EventType::MintedNft {
@@ -477,7 +477,7 @@ fn should_display_reimbursed_requests() {
     let dashboard = {
         let mut state = initial_state();
         let deposit = received_eth_event();
-        apply_state_transition(&mut state, &EventType::AcceptedTransfer(deposit.clone()));
+        apply_state_transition(&mut state, &EventType::AcceptedMint(deposit.clone()));
         apply_state_transition(
             &mut state,
             &EventType::MintedNft {

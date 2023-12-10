@@ -490,7 +490,7 @@ fn arb_event_type() -> impl Strategy<Value = EventType> {
     prop_oneof![
         arb_init_arg().prop_map(EventType::Init),
         arb_upgrade_arg().prop_map(EventType::Upgrade),
-        arb_received_eth_event().prop_map(EventType::AcceptedTransfer),
+        arb_received_eth_event().prop_map(EventType::AcceptedMint),
         arb_event_source().prop_map(|event_source| EventType::InvalidTransfer {
             event_source,
             reason: "bad principal".to_string()
@@ -1013,7 +1013,7 @@ mod eth_balance {
         let mut state_before_withdrawal = a_state();
         apply_state_transition(
             &mut state_before_withdrawal,
-            &EventType::AcceptedTransfer(received_eth_event()),
+            &EventType::AcceptedMint(received_eth_event()),
         );
 
         let mut state_after_successful_withdrawal = state_before_withdrawal.clone();

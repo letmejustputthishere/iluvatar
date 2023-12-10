@@ -34,6 +34,10 @@ pub struct TransferEvent {
     pub token_id: u256,
 }
 
+// pub struct MintEvent(TransferEvent);
+
+pub type MintEvent = TransferEvent;
+
 impl fmt::Debug for TransferEvent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ReceivedEthEvent")
@@ -69,6 +73,9 @@ impl TransferEvent {
             transaction_hash: self.transaction_hash,
             log_index: self.log_index,
         }
+    }
+    pub fn is_mint(&self) -> bool {
+        self.from_address == Address::ZERO
     }
 }
 
@@ -130,6 +137,11 @@ pub enum TransferEventError {
     },
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MintEventError {
+    NoMintEvent,
+}
+
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 pub enum EventSourceError {
     #[error("failed to decode principal from bytes {invalid_principal}")]
@@ -169,11 +181,11 @@ impl TryFrom<LogEntry> for TransferEvent {
             });
         }
 
-        if entry.topics.len() != 3 {
+        if entry.topics.len() != 4 {
             return Err(TransferEventError::InvalidEventSource {
                 source: event_source,
                 error: EventSourceError::InvalidEvent(format!(
-                    "Expected exactly 3 topics, got {}",
+                    "Expected exactly 4 topics, got {}",
                     entry.topics.len()
                 )),
             });
@@ -196,7 +208,6 @@ impl TryFrom<LogEntry> for TransferEvent {
                 )),
             }
         })?;
-        // TODO: check that the token id is a valid u256
         let token_id = u256::from_be_bytes(entry.topics[3].0);
 
         Ok(TransferEvent {
@@ -209,3 +220,24 @@ impl TryFrom<LogEntry> for TransferEvent {
         })
     }
 }
+
+// impl TryFrom<TransferEvent> for MintEvent {
+//     type Error = MintEventError;
+
+//     fn try_from(transfer_event: TransferEvent) -> Result<Self, Self::Error> {
+//         // check if from_address is the zero address
+//         if transfer_event.from_address != Address::ZERO {
+//             return Err(MintEventError::NoMintEvent);
+//         }
+
+//         Ok(MintEvent(transfer_event))
+//     }
+// }
+
+// impl Deref for MintEvent {
+//     type Target = TransferEvent;
+
+//     fn deref(&self) -> &Self::Target {
+//         &self.0
+//     }
+// }

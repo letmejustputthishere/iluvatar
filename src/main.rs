@@ -3,7 +3,7 @@ use ic_canister_log::log;
 use ic_canisters_http_types::{HttpRequest, HttpResponse, HttpResponseBuilder};
 use ic_cdk_macros::{init, post_upgrade, pre_upgrade, query, update};
 
-use ic_cketh_minter::deposit::scrap_eth_logs;
+use ic_cketh_minter::deposit::scrape_eth_logs;
 use ic_cketh_minter::endpoints::events::{
     Event as CandidEvent, EventSource as CandidEventSource, GetEventsArg, GetEventsResult,
 };
@@ -24,9 +24,9 @@ pub const SEPOLIA_TEST_CHAIN_ID: u64 = 11155111;
 
 fn setup_timers() {
     // Start scraping logs immediately after the install, then repeat with the interval.
-    ic_cdk_timers::set_timer(Duration::from_secs(0), || ic_cdk::spawn(scrap_eth_logs()));
+    ic_cdk_timers::set_timer(Duration::from_secs(0), || ic_cdk::spawn(scrape_eth_logs()));
     ic_cdk_timers::set_timer_interval(SCRAPPING_ETH_LOGS_INTERVAL, || {
-        ic_cdk::spawn(scrap_eth_logs())
+        ic_cdk::spawn(scrape_eth_logs())
     });
 }
 
@@ -120,7 +120,7 @@ fn get_events(arg: GetEventsArg) -> GetEventsResult {
             payload: match payload {
                 EventType::Init(args) => EP::Init(args),
                 EventType::Upgrade(args) => EP::Upgrade(args),
-                EventType::AcceptedTransfer(TransferEvent {
+                EventType::AcceptedMint(TransferEvent {
                     transaction_hash,
                     block_number,
                     log_index,

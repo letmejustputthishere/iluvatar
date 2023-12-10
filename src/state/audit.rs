@@ -15,7 +15,7 @@ pub fn apply_state_transition(state: &mut State, payload: &EventType) {
                 .upgrade(upgrade_arg.clone())
                 .expect("applying upgrade event should succeed");
         }
-        EventType::AcceptedTransfer(eth_event) => {
+        EventType::AcceptedMint(eth_event) => {
             state.record_event_to_mint(eth_event);
         }
         EventType::InvalidTransfer {

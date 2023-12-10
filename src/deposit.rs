@@ -1,5 +1,7 @@
 use crate::address::Address;
-use crate::eth_logs::{report_transaction_error, TransferEventError};
+use crate::eth_logs::{
+    report_transaction_error, MintEvent, MintEventError, TransferEvent, TransferEventError,
+};
 use crate::eth_rpc::{BlockSpec, HttpOutcallError};
 use crate::eth_rpc_client::EthRpcClient;
 use crate::guard::TimerGuard;
@@ -9,13 +11,12 @@ use crate::state::{
     audit::process_event, event::EventType, mutate_state, read_state, State, TaskType,
 };
 use ic_canister_log::log;
+use icrc_ledger_types::icrc3::transactions::Mint;
 
 use std::cmp::{min, Ordering};
 use std::time::Duration;
 
 async fn mint_cketh() {
-    
-
     let _guard = match TimerGuard::new(TaskType::MintCkEth) {
         Ok(guard) => guard,
         Err(_) => return,
@@ -94,7 +95,7 @@ async fn scrape_eth_logs_range_inclusive(
                 last_block_number
             );
 
-            let (transaction_events, errors) = loop {
+            let (transfer_events, errors) = loop {
                 match crate::eth_logs::last_received_eth_events(
                     contract_address,
                     from,
@@ -105,9 +106,9 @@ async fn scrape_eth_logs_range_inclusive(
                     Ok((events, errors)) => break (events, errors),
                     Err(e) => {
                         log!(
-                        INFO,
-                        "Failed to get ETH logs from block {from} to block {last_block_number}: {e:?}",
-                    );
+                            INFO,
+                            "Failed to get ETH logs from block {from} to block {last_block_number}: {e:?}",
+                        );
                         if e.has_http_outcall_error_matching(
                             HttpOutcallError::is_response_too_large,
                         ) {
@@ -133,14 +134,19 @@ async fn scrape_eth_logs_range_inclusive(
                     }
                 };
             };
+            // extract only the mint events from the transfer events
+            let mint_events: Vec<MintEvent> = transfer_events
+                .into_iter()
+                .filter(TransferEvent::is_mint)
+                .collect();
 
-            for event in transaction_events {
+            for mint in mint_events {
                 log!(
                     INFO,
-                    "Received event {event:?}; will generate metadata and assets for token id {}",
-                    event.token_id,
+                    "Received event {mint:?}; will generate metadata and assets for token id {}",
+                    mint.token_id,
                 );
-                mutate_state(|s| process_event(s, EventType::AcceptedTransfer(event)));
+                mutate_state(|s| process_event(s, EventType::AcceptedMint(mint)));
             }
             if read_state(State::has_events_to_mint) {
                 ic_cdk_timers::set_timer(Duration::from_secs(0), || ic_cdk::spawn(mint_cketh()));
@@ -171,7 +177,7 @@ async fn scrape_eth_logs_range_inclusive(
     }
 }
 
-pub async fn scrap_eth_logs() {
+pub async fn scrape_eth_logs() {
     let _guard = match TimerGuard::new(TaskType::ScrapEthLogs) {
         Ok(guard) => guard,
         Err(_) => return,

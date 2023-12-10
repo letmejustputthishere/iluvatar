@@ -17,7 +17,7 @@ pub enum EventType {
     Upgrade(#[n(0)] UpgradeArg),
     /// The minter discovered a ckETH deposit in the helper contract logs.
     #[n(2)]
-    AcceptedTransfer(#[n(0)] TransferEvent),
+    AcceptedMint(#[n(0)] TransferEvent),
     /// The minter discovered an invalid ckETH deposit in the helper contract logs.
     #[n(4)]
     InvalidTransfer {
