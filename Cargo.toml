@@ -7,10 +7,6 @@ edition = "2021"
 name = "ic-cketh-minter"
 path = "src/main.rs"
 
-[[bin]]
-name = "cketh-principal-to-hex"
-path = "bin/principal_to_hex.rs"
-
 [dependencies]
 hex = "0.4"
 hex-literal = "0.4.1"
