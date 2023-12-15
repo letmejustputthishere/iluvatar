@@ -14,6 +14,7 @@ use std::collections::BTreeSet;
 pub struct DashboardTemplate {
     pub ethereum_network: EthereumNetwork,
     pub contract_address: String,
+    pub minter_address: String,
     pub first_synced_block: BlockNumber,
     pub last_synced_block: BlockNumber,
     pub last_observed_block: Option<BlockNumber>,
@@ -31,9 +32,8 @@ impl DashboardTemplate {
 
         DashboardTemplate {
             ethereum_network: state.ethereum_network,
-            contract_address: state
-                .ethereum_contract_address
-                .map_or("N/A".to_string(), |address| address.to_string()),
+            contract_address: state.ethereum_contract_address.to_string(),
+            minter_address: state.minter_address.to_string(),
             first_synced_block: state.first_scraped_block_number,
             last_synced_block: state.last_scraped_block_number,
             last_observed_block: state.last_observed_block_number,

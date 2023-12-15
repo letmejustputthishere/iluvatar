@@ -1,7 +1,5 @@
 use crate::address::Address;
-use crate::eth_logs::{
-    report_transaction_error,  MintEventError, MintEvent, TransferEventError,
-};
+use crate::eth_logs::{report_transaction_error, MintEvent, MintEventError, TransferEventError};
 use crate::eth_rpc::{BlockSpec, HttpOutcallError};
 use crate::eth_rpc_client::EthRpcClient;
 use crate::guard::TimerGuard;
@@ -177,16 +175,7 @@ pub async fn scrape_eth_logs() {
         Ok(guard) => guard,
         Err(_) => return,
     };
-    let contract_address = match read_state(|s| s.ethereum_contract_address) {
-        Some(address) => address,
-        None => {
-            log!(
-                DEBUG,
-                "[scrape_eth_logs]: skipping scrapping ETH logs: no contract address"
-            );
-            return;
-        }
-    };
+    let contract_address = read_state(|s| s.ethereum_contract_address);
     let last_block_number = match update_last_observed_block_number().await {
         Some(block_number) => block_number,
         None => {

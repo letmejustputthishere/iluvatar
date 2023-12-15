@@ -35,7 +35,7 @@ impl MintedEvent {
 pub struct State {
     pub ethereum_network: EthereumNetwork,
     pub minter_address: Address,
-    pub ethereum_contract_address: Option<Address>,
+    pub ethereum_contract_address: Address,
     pub ethereum_block_height: BlockTag,
     pub first_scraped_block_number: BlockNumber,
     pub last_scraped_block_number: BlockNumber,
@@ -66,11 +66,7 @@ pub enum InvalidStateError {
 
 impl State {
     pub fn validate_config(&self) -> Result<(), InvalidStateError> {
-        if self
-            .ethereum_contract_address
-            .iter()
-            .any(|address| address == &Address::ZERO)
-        {
+        if self.ethereum_contract_address == Address::ZERO {
             return Err(InvalidStateError::InvalidEthereumContractAddress(
                 "ethereum_contract_address cannot be the zero address".to_string(),
             ));
@@ -166,7 +162,7 @@ impl State {
             let ethereum_contract_address = Address::from_str(&address).map_err(|e| {
                 InvalidStateError::InvalidEthereumContractAddress(format!("ERROR: {}", e))
             })?;
-            self.ethereum_contract_address = Some(ethereum_contract_address);
+            self.ethereum_contract_address = ethereum_contract_address;
         }
         if let Some(block_height) = ethereum_block_height {
             self.ethereum_block_height = block_height.into();

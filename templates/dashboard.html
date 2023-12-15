@@ -108,8 +108,12 @@ N/A
                                 ethereum_network }}</a></td>
                     </tr>
                     <tr id="contract-address">
-                        <th>Helper contract address</th>
+                        <th>NFT contract address</th>
                         <td>{% call etherscan_address_link(contract_address) %}</td>
+                    </tr>
+                    <tr id="minter-address">
+                        <th>Minter address</th>
+                        <td>{% call etherscan_address_link(minter_address) %}</td>
                     </tr>
                 </tbody>
             </table>
@@ -193,11 +197,11 @@ N/A
                 <tbody>
                     {% for event in minted_events %}
                     <tr>
-                        <td>{% call etherscan_tx_link(event.transfer_event.transaction_hash.to_string()) %}</td>
-                        <td class="numeric">{{ event.transfer_event.log_index }}</td>
-                        <td>{% call etherscan_address_link(event.transfer_event.from_address.to_string()) %}</td>
-                        <td>{% call etherscan_address_link(event.transfer_event.to_address.to_string()) %}</td>
-                        <td class="numeric">{{ event.transfer_event.token_id}}</td>
+                        <td>{% call etherscan_tx_link(event.mint_event.transaction_hash.to_string()) %}</td>
+                        <td class="numeric">{{ event.mint_event.log_index }}</td>
+                        <td>{% call etherscan_address_link(event.mint_event.from_address.to_string()) %}</td>
+                        <td>{% call etherscan_address_link(event.mint_event.to_address.to_string()) %}</td>
+                        <td class="numeric">{{ event.mint_event.token_id}}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

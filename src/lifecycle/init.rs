@@ -16,7 +16,7 @@ pub struct InitArg {
     #[n(1)]
     pub minter_address: Option<String>,
     #[n(2)]
-    pub ethereum_contract_address: Option<String>,
+    pub ethereum_contract_address: String,
     #[n(3)]
     pub ethereum_block_height: CandidBlockTag,
     #[cbor(n(4), with = "crate::cbor::nat")]
@@ -37,10 +37,8 @@ impl TryFrom<InitArg> for State {
     ) -> Result<Self, Self::Error> {
         use std::str::FromStr;
 
-        let ethereum_contract_address = ethereum_contract_address
-            .map(|a| Address::from_str(&a))
-            .transpose()
-            .map_err(|e| {
+        let ethereum_contract_address =
+            Address::from_str(&ethereum_contract_address).map_err(|e| {
                 InvalidStateError::InvalidEthereumContractAddress(format!("ERROR: {}", e))
             })?;
         let minter_address = minter_address.map_or_else(

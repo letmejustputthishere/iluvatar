@@ -78,9 +78,7 @@ fn post_upgrade(minter_arg: Option<MinterArg>) {
 #[query]
 #[candid_method(query)]
 async fn smart_contract_address() -> String {
-    read_state(|s| s.ethereum_contract_address)
-        .map(|a| a.to_string())
-        .unwrap_or("N/A".to_string())
+    read_state(|s| s.ethereum_contract_address).to_string()
 }
 
 #[candid_method(update)]
