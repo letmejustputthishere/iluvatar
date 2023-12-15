@@ -2,7 +2,7 @@
 mod tests;
 
 use crate::address::Address;
-use crate::eth_rpc::{FixedSizeData, Hash, LogEntry, Quantity};
+use crate::eth_rpc::{FixedSizeData, Hash, LogEntry};
 use crate::eth_rpc_client::{EthRpcClient, MultiCallError};
 use crate::logs::{DEBUG, INFO};
 use crate::numeric::{BlockNumber, LogIndex};
@@ -19,7 +19,7 @@ pub(crate) const TRANSFER_EVENT_TOPIC: [u8; 32] =
     hex!("ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef");
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Encode, Decode)]
-pub struct TransferEvent {
+pub struct MintEvent {
     #[n(0)]
     pub transaction_hash: Hash,
     #[n(1)]
@@ -34,11 +34,7 @@ pub struct TransferEvent {
     pub token_id: u256,
 }
 
-// pub struct MintEvent(TransferEvent);
-
-pub type MintEvent = TransferEvent;
-
-impl fmt::Debug for TransferEvent {
+impl fmt::Debug for MintEvent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ReceivedEthEvent")
             .field("transaction_hash", &self.transaction_hash)
@@ -67,15 +63,12 @@ impl fmt::Display for EventSource {
     }
 }
 
-impl TransferEvent {
+impl MintEvent {
     pub fn source(&self) -> EventSource {
         EventSource {
             transaction_hash: self.transaction_hash,
             log_index: self.log_index,
         }
-    }
-    pub fn is_mint(&self) -> bool {
-        self.from_address == Address::ZERO
     }
 }
 
@@ -83,7 +76,7 @@ pub async fn last_received_eth_events(
     contract_address: Address,
     from: BlockNumber,
     to: BlockNumber,
-) -> Result<(Vec<TransferEvent>, Vec<TransferEventError>), MultiCallError<Vec<LogEntry>>> {
+) -> Result<(Vec<MintEvent>, Vec<TransferEventError>), MultiCallError<Vec<LogEntry>>> {
     use crate::eth_rpc::GetLogsParam;
 
     if from > to {
@@ -98,15 +91,18 @@ pub async fn last_received_eth_events(
             from_block: from.into(),
             to_block: to.into(),
             address: vec![contract_address],
-            topics: vec![FixedSizeData(TRANSFER_EVENT_TOPIC)],
+            topics: vec![
+                FixedSizeData(TRANSFER_EVENT_TOPIC),
+                Address::ZERO.to_fixed_size_data(), // this ensures we only receive mint events
+            ],
         })
         .await?;
 
     let (ok, not_ok): (Vec<_>, Vec<_>) = result
         .into_iter()
-        .map(TransferEvent::try_from)
+        .map(MintEvent::try_from)
         .partition(Result::is_ok);
-    let valid_transactions: Vec<TransferEvent> = ok.into_iter().map(Result::unwrap).collect();
+    let valid_transactions: Vec<MintEvent> = ok.into_iter().map(Result::unwrap).collect();
     let errors: Vec<TransferEventError> = not_ok.into_iter().map(Result::unwrap_err).collect();
     Ok((valid_transactions, errors))
 }
@@ -150,7 +146,7 @@ pub enum EventSourceError {
     InvalidEvent(String),
 }
 
-impl TryFrom<LogEntry> for TransferEvent {
+impl TryFrom<LogEntry> for MintEvent {
     type Error = TransferEventError;
 
     fn try_from(entry: LogEntry) -> Result<Self, Self::Error> {
@@ -210,7 +206,7 @@ impl TryFrom<LogEntry> for TransferEvent {
         })?;
         let token_id = u256::from_be_bytes(entry.topics[3].0);
 
-        Ok(TransferEvent {
+        Ok(MintEvent {
             transaction_hash,
             block_number,
             log_index,

@@ -1,5 +1,5 @@
 use crate::address::Address;
-use crate::eth_logs::{EventSource, TransferEvent};
+use crate::eth_logs::{EventSource, MintEvent};
 use crate::eth_rpc::BlockTag;
 
 use crate::lifecycle::upgrade::UpgradeArg;
@@ -22,24 +22,25 @@ thread_local! {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MintedEvent {
-    pub transfer_event: TransferEvent,
+    pub mint_event: MintEvent,
 }
 
 impl MintedEvent {
     pub fn source(&self) -> EventSource {
-        self.transfer_event.source()
+        self.mint_event.source()
     }
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct State {
     pub ethereum_network: EthereumNetwork,
+    pub minter_address: Address,
     pub ethereum_contract_address: Option<Address>,
     pub ethereum_block_height: BlockTag,
     pub first_scraped_block_number: BlockNumber,
     pub last_scraped_block_number: BlockNumber,
     pub last_observed_block_number: Option<BlockNumber>,
-    pub events_to_mint: BTreeMap<EventSource, TransferEvent>,
+    pub events_to_mint: BTreeMap<EventSource, MintEvent>,
     pub minted_events: BTreeMap<EventSource, MintedEvent>,
     pub invalid_events: BTreeMap<EventSource, String>,
     pub skipped_blocks: BTreeSet<BlockNumber>,
@@ -60,6 +61,7 @@ pub enum InvalidStateError {
     InvalidEthereumContractAddress(String),
     InvalidMinimumWithdrawalAmount(String),
     InvalidLastScrapedBlockNumber(String),
+    InvalidMinterAddress(String),
 }
 
 impl State {
@@ -76,7 +78,7 @@ impl State {
         Ok(())
     }
 
-    fn record_event_to_mint(&mut self, event: &TransferEvent) {
+    fn record_event_to_mint(&mut self, event: &MintEvent) {
         let event_source = event.source();
         assert!(
             !self.events_to_mint.contains_key(&event_source),
@@ -116,14 +118,14 @@ impl State {
             !self.invalid_events.contains_key(&source),
             "attempted to mint an event previously marked as invalid {source:?}"
         );
-        let transfer_event = match self.events_to_mint.remove(&source) {
+        let mint_event = match self.events_to_mint.remove(&source) {
             Some(event) => event,
             None => panic!("attempted to mint ckETH for an unknown event {source:?}"),
         };
 
         assert_eq!(
             self.minted_events
-                .insert(source, MintedEvent { transfer_event }),
+                .insert(source, MintedEvent { mint_event }),
             None,
             "attempted to mint ckETH twice for the same event {source:?}"
         );

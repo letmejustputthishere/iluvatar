@@ -1,6 +1,6 @@
 use crate::address::Address;
 use crate::eth_logs::{
-    report_transaction_error, MintEvent, MintEventError, TransferEvent, TransferEventError,
+    report_transaction_error,  MintEventError, MintEvent, TransferEventError,
 };
 use crate::eth_rpc::{BlockSpec, HttpOutcallError};
 use crate::eth_rpc_client::EthRpcClient;
@@ -95,7 +95,7 @@ async fn scrape_eth_logs_range_inclusive(
                 last_block_number
             );
 
-            let (transfer_events, errors) = loop {
+            let (mint_events, errors) = loop {
                 match crate::eth_logs::last_received_eth_events(
                     contract_address,
                     from,
@@ -134,11 +134,6 @@ async fn scrape_eth_logs_range_inclusive(
                     }
                 };
             };
-            // extract only the mint events from the transfer events
-            let mint_events: Vec<MintEvent> = transfer_events
-                .into_iter()
-                .filter(TransferEvent::is_mint)
-                .collect();
 
             for mint in mint_events {
                 log!(
@@ -187,7 +182,7 @@ pub async fn scrape_eth_logs() {
         None => {
             log!(
                 DEBUG,
-                "[scrap_eth_logs]: skipping scrapping ETH logs: no contract address"
+                "[scrape_eth_logs]: skipping scrapping ETH logs: no contract address"
             );
             return;
         }
@@ -197,7 +192,7 @@ pub async fn scrape_eth_logs() {
         None => {
             log!(
                 DEBUG,
-                "[scrap_eth_logs]: skipping scrapping ETH logs: no last observed block number"
+                "[scrape_eth_logs]: skipping scrapping ETH logs: no last observed block number"
             );
             return;
         }

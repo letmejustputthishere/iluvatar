@@ -2,7 +2,7 @@ use crate::dashboard::tests::assertions::DashboardAssert;
 use crate::dashboard::DashboardTemplate;
 use candid::Principal;
 use ic_cketh_minter::address::Address;
-use ic_cketh_minter::eth_logs::{EventSource, TransferEvent};
+use ic_cketh_minter::eth_logs::{EventSource, MintEvent};
 use ic_cketh_minter::eth_rpc_client::responses::{TransactionReceipt, TransactionStatus};
 use ic_cketh_minter::lifecycle::EthereumNetwork;
 use ic_cketh_minter::numeric::{
@@ -86,11 +86,11 @@ fn should_display_events_to_mint_sorted_by_decreasing_block_number() {
 
     let dashboard = {
         let mut state = initial_state();
-        let event_1 = TransferEvent {
+        let event_1 = MintEvent {
             block_number: BlockNumber::from(3960623_u32),
             ..received_eth_event()
         };
-        let event_2 = TransferEvent {
+        let event_2 = MintEvent {
             block_number: BlockNumber::from(3960624_u32),
             transaction_hash: "0x5e5a5954e0a6fe5e61067330ea6f1398425a5e01a1dc1ef895b5dde00994e796"
                 .parse()
@@ -136,11 +136,11 @@ fn should_display_minted_events_sorted_by_decreasing_mint_block_index() {
 
     let dashboard = {
         let mut state = initial_state();
-        let event_1 = TransferEvent {
+        let event_1 = MintEvent {
             block_number: BlockNumber::from(3960623_u32),
             ..received_eth_event()
         };
-        let event_2 = TransferEvent {
+        let event_2 = MintEvent {
             block_number: BlockNumber::from(3960624_u32),
             transaction_hash: "0x5e5a5954e0a6fe5e61067330ea6f1398425a5e01a1dc1ef895b5dde00994e796"
                 .parse()
@@ -618,8 +618,8 @@ fn initial_state() -> State {
     .expect("valid init args")
 }
 
-fn received_eth_event() -> TransferEvent {
-    TransferEvent {
+fn received_eth_event() -> MintEvent {
+    MintEvent {
         transaction_hash: "0xf1ac37d920fa57d9caeebc7136fea591191250309ffca95ae0e8a7739de89cc2"
             .parse()
             .unwrap(),

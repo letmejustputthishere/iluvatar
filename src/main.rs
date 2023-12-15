@@ -8,7 +8,7 @@ use ic_cketh_minter::endpoints::events::{
     Event as CandidEvent, EventSource as CandidEventSource, GetEventsArg, GetEventsResult,
 };
 
-use ic_cketh_minter::eth_logs::{EventSource, TransferEvent};
+use ic_cketh_minter::eth_logs::{EventSource, MintEvent};
 use ic_cketh_minter::eth_rpc::into_nat;
 use ic_cketh_minter::lifecycle::MinterArg;
 use ic_cketh_minter::logs::INFO;
@@ -120,7 +120,7 @@ fn get_events(arg: GetEventsArg) -> GetEventsResult {
             payload: match payload {
                 EventType::Init(args) => EP::Init(args),
                 EventType::Upgrade(args) => EP::Upgrade(args),
-                EventType::AcceptedMint(TransferEvent {
+                EventType::AcceptedMint(MintEvent {
                     transaction_hash,
                     block_number,
                     log_index,

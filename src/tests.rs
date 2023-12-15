@@ -50,7 +50,7 @@ fn deserialize_json_reply() {
 
 mod eth_get_logs {
     use crate::address::Address;
-    use crate::eth_logs::TransferEvent;
+    use crate::eth_logs::MintEvent;
     use crate::eth_rpc::{FixedSizeData, LogEntry};
     use crate::numeric::{BlockNumber, LogIndex, Wei, TokenId};
     use assert_matches::assert_matches;
@@ -127,8 +127,8 @@ mod eth_get_logs {
             "removed": false
         }"#;
         let parsed_event =
-            TransferEvent::try_from(serde_json::from_str::<LogEntry>(event).unwrap()).unwrap();
-        let expected_event = TransferEvent {
+            MintEvent::try_from(serde_json::from_str::<LogEntry>(event).unwrap()).unwrap();
+        let expected_event = MintEvent {
             transaction_hash: "0x705f826861c802b407843e99af986cfde8749b669e5e0a5a150f4350bcaa9bc3"
                 .parse()
                 .unwrap(),
@@ -166,7 +166,7 @@ mod eth_get_logs {
         }"#;
 
         let parsed_event =
-            TransferEvent::try_from(serde_json::from_str::<LogEntry>(event).unwrap());
+            MintEvent::try_from(serde_json::from_str::<LogEntry>(event).unwrap());
         let expected_error = Err(TransferEventError::InvalidEventSource {
             source: EventSource {
                 transaction_hash:

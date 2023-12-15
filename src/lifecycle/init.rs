@@ -14,48 +14,45 @@ pub struct InitArg {
     #[n(0)]
     pub ethereum_network: EthereumNetwork,
     #[n(1)]
-    pub ecdsa_key_name: String,
+    pub minter_address: Option<String>,
     #[n(2)]
     pub ethereum_contract_address: Option<String>,
-    #[cbor(n(3), with = "crate::cbor::principal")]
-    pub ledger_id: Principal,
-    #[n(4)]
+    #[n(3)]
     pub ethereum_block_height: CandidBlockTag,
-    #[cbor(n(6), with = "crate::cbor::nat")]
-    pub minimum_withdrawal_amount: Nat,
-    #[cbor(n(7), with = "crate::cbor::nat")]
-    pub next_transaction_nonce: Nat,
-    #[cbor(n(8), with = "crate::cbor::nat")]
+    #[cbor(n(4), with = "crate::cbor::nat")]
     pub last_scraped_block_number: Nat,
 }
 
 impl TryFrom<InitArg> for State {
     type Error = InvalidStateError;
+
     fn try_from(
         InitArg {
             ethereum_network,
-            ecdsa_key_name: _,
+            minter_address,
             ethereum_contract_address,
-            ledger_id: _,
             ethereum_block_height,
-            minimum_withdrawal_amount,
-            next_transaction_nonce,
             last_scraped_block_number,
         }: InitArg,
     ) -> Result<Self, Self::Error> {
         use std::str::FromStr;
 
-        let _initial_nonce = TransactionNonce::try_from(next_transaction_nonce)
-            .map_err(|e| InvalidStateError::InvalidTransactionNonce(format!("ERROR: {}", e)))?;
-        let _minimum_withdrawal_amount = Wei::try_from(minimum_withdrawal_amount).map_err(|e| {
-            InvalidStateError::InvalidMinimumWithdrawalAmount(format!("ERROR: {}", e))
-        })?;
         let ethereum_contract_address = ethereum_contract_address
             .map(|a| Address::from_str(&a))
             .transpose()
             .map_err(|e| {
                 InvalidStateError::InvalidEthereumContractAddress(format!("ERROR: {}", e))
             })?;
+        let minter_address = minter_address.map_or_else(
+            || Ok(Address::ZERO), // Provides a default value when minter_address is None
+            |a| {
+                Address::from_str(&a) // Tries to parse the address from the string when it's Some
+                    .map_err(|e| {
+                        InvalidStateError::InvalidMinterAddress(format!("ERROR: {}", e))
+                    })
+            },
+        )?;
+
         let last_scraped_block_number =
             BlockNumber::try_from(last_scraped_block_number).map_err(|e| {
                 InvalidStateError::InvalidLastScrapedBlockNumber(format!("ERROR: {}", e))
@@ -70,6 +67,7 @@ impl TryFrom<InitArg> for State {
                 })?;
         let state = Self {
             ethereum_network,
+            minter_address,
             ethereum_contract_address,
             ethereum_block_height: BlockTag::from(ethereum_block_height),
             first_scraped_block_number,

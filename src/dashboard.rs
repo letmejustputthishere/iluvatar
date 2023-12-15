@@ -2,7 +2,7 @@
 mod tests;
 
 use askama::Template;
-use ic_cketh_minter::eth_logs::TransferEvent;
+use ic_cketh_minter::eth_logs::MintEvent;
 use ic_cketh_minter::lifecycle::EthereumNetwork;
 use ic_cketh_minter::numeric::BlockNumber;
 use ic_cketh_minter::state::{MintedEvent, State};
@@ -18,14 +18,14 @@ pub struct DashboardTemplate {
     pub last_synced_block: BlockNumber,
     pub last_observed_block: Option<BlockNumber>,
     pub minted_events: Vec<MintedEvent>,
-    pub events_to_mint: Vec<TransferEvent>,
+    pub events_to_mint: Vec<MintEvent>,
     pub skipped_blocks: BTreeSet<BlockNumber>,
 }
 
 impl DashboardTemplate {
     pub fn from_state(state: &State) -> Self {
         let mut minted_events: Vec<_> = state.minted_events.values().cloned().collect();
-        minted_events.sort_unstable_by_key(|event| Reverse(event.transfer_event.token_id));
+        minted_events.sort_unstable_by_key(|event| Reverse(event.mint_event.token_id));
         let mut events_to_mint: Vec<_> = state.events_to_mint.values().cloned().collect();
         events_to_mint.sort_unstable_by_key(|event| Reverse(event.block_number));
 

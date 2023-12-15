@@ -5,6 +5,8 @@ use std::fmt;
 use std::fmt::{Display, Formatter, LowerHex, UpperHex};
 use std::str::FromStr;
 
+use crate::eth_rpc::FixedSizeData;
+
 #[cfg(test)]
 mod tests;
 
@@ -40,6 +42,16 @@ impl Address {
         let mut addr = [0u8; 20];
         addr[..].copy_from_slice(&hash[12..32]);
         Self(addr)
+    }
+
+    /// Converts the 20-byte Address into FixedSizeData.
+    ///
+    /// This method prepends the 20-byte address with 12 leading zeroes
+    /// to fit into a 32-byte FixedSizeData structure.
+    pub fn to_fixed_size_data(&self) -> FixedSizeData {
+        let mut array = [0u8; 32];
+        array[12..].copy_from_slice(&self.0);
+        FixedSizeData(array)
     }
 }
 

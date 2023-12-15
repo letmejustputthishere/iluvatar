@@ -1,7 +1,7 @@
 use crate::address::Address;
 use crate::checked_amount::CheckedAmountOf;
 use crate::endpoints::CandidBlockTag;
-use crate::eth_logs::{EventSource, TransferEvent};
+use crate::eth_logs::{EventSource, MintEvent};
 use crate::eth_rpc::{BlockTag, Hash};
 use crate::eth_rpc_client::responses::{TransactionReceipt, TransactionStatus};
 use crate::lifecycle::init::InitArg;
@@ -62,7 +62,7 @@ fn a_state() -> State {
 }
 
 mod mint_transaction {
-    use crate::eth_logs::{EventSourceError, TransferEvent};
+    use crate::eth_logs::{EventSourceError, MintEvent};
     use crate::lifecycle::init::InitArg;
     use crate::numeric::{wei_from_milli_ether, LedgerMintIndex, LogIndex};
     use crate::state::tests::received_eth_event;
@@ -78,7 +78,7 @@ mod mint_transaction {
         assert!(state.events_to_mint.contains_key(&event.source()));
 
         let minted_event = MintedEvent {
-            transfer_event: event.clone(),
+            mint_event: event.clone(),
         };
 
         state.record_successful_mint(event.source());
@@ -93,11 +93,11 @@ mod mint_transaction {
     #[test]
     fn should_allow_minting_events_with_equal_txhash() {
         let mut state = dummy_state();
-        let event_1 = TransferEvent {
+        let event_1 = MintEvent {
             log_index: LogIndex::from(1u8),
             ..received_eth_event()
         };
-        let event_2 = TransferEvent {
+        let event_2 = MintEvent {
             log_index: LogIndex::from(2u8),
             ..received_eth_event()
         };
@@ -186,8 +186,8 @@ mod mint_transaction {
     }
 }
 
-fn received_eth_event() -> TransferEvent {
-    TransferEvent {
+fn received_eth_event() -> MintEvent {
+    MintEvent {
         transaction_hash: "0xf1ac37d920fa57d9caeebc7136fea591191250309ffca95ae0e8a7739de89cc2"
             .parse()
             .unwrap(),
@@ -403,8 +403,8 @@ prop_compose! {
         from_address in arb_address(),
         to_address in arb_address(),
         token_id in arb_checked_amount_of(),
-    ) -> TransferEvent {
-        TransferEvent {
+    ) -> MintEvent {
+        MintEvent {
             transaction_hash,
             block_number,
             log_index,
@@ -720,7 +720,7 @@ fn state_equivalence() {
         last_scraped_block_number: BlockNumber::new(1_000_000),
         last_observed_block_number: Some(BlockNumber::new(2_000_000)),
         events_to_mint: btreemap! {
-            source("0xac493fb20c93bd3519a4a5d90ce72d69455c41c5b7e229dafee44344242ba467", 100) => TransferEvent {
+            source("0xac493fb20c93bd3519a4a5d90ce72d69455c41c5b7e229dafee44344242ba467", 100) => MintEvent {
                 transaction_hash: "0xac493fb20c93bd3519a4a5d90ce72d69455c41c5b7e229dafee44344242ba467".parse().unwrap(),
                 block_number: BlockNumber::new(500_000),
                 log_index: LogIndex::new(100),
@@ -731,7 +731,7 @@ fn state_equivalence() {
         },
         minted_events: btreemap! {
             source("0x705f826861c802b407843e99af986cfde8749b669e5e0a5a150f4350bcaa9bc3", 1) => MintedEvent {
-                transfer_event: TransferEvent {
+                mint_event: MintEvent {
                     transaction_hash: "0x705f826861c802b407843e99af986cfde8749b669e5e0a5a150f4350bcaa9bc3".parse().unwrap(),
                     block_number: BlockNumber::new(450_000),
                     log_index: LogIndex::new(1),

@@ -2,7 +2,7 @@
 mod tests;
 
 use crate::address::Address;
-use crate::eth_logs::TransferEvent;
+use crate::eth_logs::MintEvent;
 use crate::eth_rpc::Hash;
 use crate::numeric::LogIndex;
 use icrc_ledger_types::icrc1::transfer::Memo;
@@ -63,8 +63,8 @@ impl From<BurnMemo> for Memo {
     }
 }
 
-impl From<TransferEvent> for Memo {
-    fn from(event: TransferEvent) -> Self {
+impl From<MintEvent> for Memo {
+    fn from(event: MintEvent) -> Self {
         Memo::from(MintMemo::Convert {
             from_address: event.from_address,
             tx_hash: event.transaction_hash,

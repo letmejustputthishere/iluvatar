@@ -1,4 +1,4 @@
-use crate::eth_logs::{EventSource, TransferEvent};
+use crate::eth_logs::{EventSource, MintEvent};
 
 use crate::lifecycle::{init::InitArg, upgrade::UpgradeArg};
 use crate::numeric::BlockNumber;
@@ -17,7 +17,7 @@ pub enum EventType {
     Upgrade(#[n(0)] UpgradeArg),
     /// The minter discovered a ckETH deposit in the helper contract logs.
     #[n(2)]
-    AcceptedMint(#[n(0)] TransferEvent),
+    AcceptedMint(#[n(0)] MintEvent),
     /// The minter discovered an invalid ckETH deposit in the helper contract logs.
     #[n(4)]
     InvalidTransfer {
