@@ -491,7 +491,7 @@ fn arb_event_type() -> impl Strategy<Value = EventType> {
         arb_init_arg().prop_map(EventType::Init),
         arb_upgrade_arg().prop_map(EventType::Upgrade),
         arb_received_eth_event().prop_map(EventType::AcceptedMint),
-        arb_event_source().prop_map(|event_source| EventType::InvalidTransfer {
+        arb_event_source().prop_map(|event_source| EventType::InvalidMint {
             event_source,
             reason: "bad principal".to_string()
         }),
@@ -998,7 +998,7 @@ mod eth_balance {
         let deposit_event = received_eth_event();
         apply_state_transition(
             &mut state,
-            &EventType::InvalidTransfer {
+            &EventType::InvalidMint {
                 event_source: deposit_event.source(),
                 reason: "invalid principal".to_string(),
             },

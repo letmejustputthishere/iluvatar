@@ -20,7 +20,7 @@ pub enum EventType {
     AcceptedMint(#[n(0)] MintEvent),
     /// The minter discovered an invalid ckETH deposit in the helper contract logs.
     #[n(4)]
-    InvalidTransfer {
+    InvalidMint {
         /// The unique identifier of the deposit on the Ethereum network.
         #[n(0)]
         event_source: EventSource,

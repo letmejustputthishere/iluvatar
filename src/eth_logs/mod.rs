@@ -74,9 +74,10 @@ impl MintEvent {
 
 pub async fn last_received_eth_events(
     contract_address: Address,
+    minter_address: Address,
     from: BlockNumber,
     to: BlockNumber,
-) -> Result<(Vec<MintEvent>, Vec<TransferEventError>), MultiCallError<Vec<LogEntry>>> {
+) -> Result<(Vec<MintEvent>, Vec<MintEventError>), MultiCallError<Vec<LogEntry>>> {
     use crate::eth_rpc::GetLogsParam;
 
     if from > to {
@@ -93,7 +94,7 @@ pub async fn last_received_eth_events(
             address: vec![contract_address],
             topics: vec![
                 FixedSizeData(TRANSFER_EVENT_TOPIC),
-                Address::ZERO.to_fixed_size_data(), // this ensures we only receive mint events
+                minter_address.to_fixed_size_data(), // this ensures we only receive mint events
             ],
         })
         .await?;
@@ -103,19 +104,19 @@ pub async fn last_received_eth_events(
         .map(MintEvent::try_from)
         .partition(Result::is_ok);
     let valid_transactions: Vec<MintEvent> = ok.into_iter().map(Result::unwrap).collect();
-    let errors: Vec<TransferEventError> = not_ok.into_iter().map(Result::unwrap_err).collect();
+    let errors: Vec<MintEventError> = not_ok.into_iter().map(Result::unwrap_err).collect();
     Ok((valid_transactions, errors))
 }
 
-pub fn report_transaction_error(error: TransferEventError) {
+pub fn report_transaction_error(error: MintEventError) {
     match error {
-        TransferEventError::PendingLogEntry => {
+        MintEventError::PendingLogEntry => {
             log!(
                 DEBUG,
                 "[report_transaction_error]: ignoring pending log entry",
             );
         }
-        TransferEventError::InvalidEventSource { source, error } => {
+        MintEventError::InvalidEventSource { source, error } => {
             log!(
                 INFO,
                 "[report_transaction_error]: cannot process {source} due to {error}",
@@ -125,17 +126,12 @@ pub fn report_transaction_error(error: TransferEventError) {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TransferEventError {
+pub enum MintEventError {
     PendingLogEntry,
     InvalidEventSource {
         source: EventSource,
         error: EventSourceError,
     },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum MintEventError {
-    NoMintEvent,
 }
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
@@ -147,29 +143,29 @@ pub enum EventSourceError {
 }
 
 impl TryFrom<LogEntry> for MintEvent {
-    type Error = TransferEventError;
+    type Error = MintEventError;
 
     fn try_from(entry: LogEntry) -> Result<Self, Self::Error> {
         let _block_hash = entry
             .block_hash
-            .ok_or(TransferEventError::PendingLogEntry)?;
+            .ok_or(MintEventError::PendingLogEntry)?;
         let block_number = entry
             .block_number
-            .ok_or(TransferEventError::PendingLogEntry)?;
+            .ok_or(MintEventError::PendingLogEntry)?;
         let transaction_hash = entry
             .transaction_hash
-            .ok_or(TransferEventError::PendingLogEntry)?;
+            .ok_or(MintEventError::PendingLogEntry)?;
         let _transaction_index = entry
             .transaction_index
-            .ok_or(TransferEventError::PendingLogEntry)?;
-        let log_index = entry.log_index.ok_or(TransferEventError::PendingLogEntry)?;
+            .ok_or(MintEventError::PendingLogEntry)?;
+        let log_index = entry.log_index.ok_or(MintEventError::PendingLogEntry)?;
         let event_source = EventSource {
             transaction_hash,
             log_index,
         };
 
         if entry.removed {
-            return Err(TransferEventError::InvalidEventSource {
+            return Err(MintEventError::InvalidEventSource {
                 source: event_source,
                 error: EventSourceError::InvalidEvent(
                     "this event has been removed from the chain".to_string(),
@@ -178,7 +174,7 @@ impl TryFrom<LogEntry> for MintEvent {
         }
 
         if entry.topics.len() != 4 {
-            return Err(TransferEventError::InvalidEventSource {
+            return Err(MintEventError::InvalidEventSource {
                 source: event_source,
                 error: EventSourceError::InvalidEvent(format!(
                     "Expected exactly 4 topics, got {}",
@@ -187,7 +183,7 @@ impl TryFrom<LogEntry> for MintEvent {
             });
         }
         let from_address = Address::try_from(&entry.topics[1].0).map_err(|err| {
-            TransferEventError::InvalidEventSource {
+            MintEventError::InvalidEventSource {
                 source: event_source,
                 error: EventSourceError::InvalidEvent(format!(
                     "Invalid address in log entry: {}",
@@ -196,7 +192,7 @@ impl TryFrom<LogEntry> for MintEvent {
             }
         })?;
         let to_address = Address::try_from(&entry.topics[2].0).map_err(|err| {
-            TransferEventError::InvalidEventSource {
+            MintEventError::InvalidEventSource {
                 source: event_source,
                 error: EventSourceError::InvalidEvent(format!(
                     "Invalid address in log entry: {}",

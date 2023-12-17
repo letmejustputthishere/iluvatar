@@ -3,7 +3,7 @@ use ic_canister_log::log;
 use ic_canisters_http_types::{HttpRequest, HttpResponse, HttpResponseBuilder};
 use ic_cdk_macros::{init, post_upgrade, pre_upgrade, query, update};
 
-use ic_cketh_minter::deposit::scrape_eth_logs;
+use ic_cketh_minter::mint::scrape_eth_logs;
 use ic_cketh_minter::endpoints::events::{
     Event as CandidEvent, EventSource as CandidEventSource, GetEventsArg, GetEventsResult,
 };
@@ -81,6 +81,12 @@ async fn smart_contract_address() -> String {
     read_state(|s| s.ethereum_contract_address).to_string()
 }
 
+#[query]
+#[candid_method(query)]
+async fn minter_address() -> String {
+    read_state(|s| s.minter_address).to_string()
+}
+
 #[candid_method(update)]
 #[update]
 async fn get_canister_status() -> ic_cdk::api::management_canister::main::CanisterStatusResponse {
@@ -133,7 +139,7 @@ fn get_events(arg: GetEventsArg) -> GetEventsResult {
                     to_address: to_address.to_string(),
                     token_id: into_nat(token_id),
                 },
-                EventType::InvalidTransfer {
+                EventType::InvalidMint {
                     event_source,
                     reason,
                 } => EP::InvalidTransfer {

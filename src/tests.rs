@@ -148,7 +148,7 @@ mod eth_get_logs {
 
     #[test]
     fn should_not_parse_removed_event() {
-        use crate::eth_logs::{EventSource, EventSourceError, TransferEventError};
+        use crate::eth_logs::{EventSource, EventSourceError, MintEventError};
         let event = r#"{
             "address": "0xb44b5e756a894775fc32eddf3314bb1b1944dc34",
             "topics": [
@@ -167,7 +167,7 @@ mod eth_get_logs {
 
         let parsed_event =
             MintEvent::try_from(serde_json::from_str::<LogEntry>(event).unwrap());
-        let expected_error = Err(TransferEventError::InvalidEventSource {
+        let expected_error = Err(MintEventError::InvalidEventSource {
             source: EventSource {
                 transaction_hash:
                     "0x705f826861c802b407843e99af986cfde8749b669e5e0a5a150f4350bcaa9bc3"

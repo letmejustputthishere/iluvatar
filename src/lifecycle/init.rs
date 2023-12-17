@@ -2,10 +2,9 @@ use crate::address::Address;
 use crate::endpoints::CandidBlockTag;
 use crate::eth_rpc::BlockTag;
 use crate::lifecycle::EthereumNetwork;
-use crate::numeric::{BlockNumber, TransactionNonce, Wei};
+use crate::numeric::BlockNumber;
 use crate::state::{InvalidStateError, State};
 use candid::types::number::Nat;
-use candid::types::principal::Principal;
 use candid::{CandidType, Deserialize};
 use minicbor::{Decode, Encode};
 

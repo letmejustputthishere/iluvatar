@@ -18,7 +18,7 @@ pub fn apply_state_transition(state: &mut State, payload: &EventType) {
         EventType::AcceptedMint(eth_event) => {
             state.record_event_to_mint(eth_event);
         }
-        EventType::InvalidTransfer {
+        EventType::InvalidMint {
             event_source,
             reason,
         } => {

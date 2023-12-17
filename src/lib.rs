@@ -1,7 +1,7 @@
 pub mod address;
 mod cbor;
 pub mod checked_amount;
-pub mod deposit;
+pub mod mint;
 pub mod endpoints;
 pub mod eth_logs;
 pub mod eth_rpc;

@@ -1,5 +1,5 @@
 use crate::address::Address;
-use crate::eth_logs::{report_transaction_error, MintEvent, MintEventError, TransferEventError};
+use crate::eth_logs::{report_transaction_error, MintEvent, MintEventError};
 use crate::eth_rpc::{BlockSpec, HttpOutcallError};
 use crate::eth_rpc_client::EthRpcClient;
 use crate::guard::TimerGuard;
@@ -9,7 +9,6 @@ use crate::state::{
     audit::process_event, event::EventType, mutate_state, read_state, State, TaskType,
 };
 use ic_canister_log::log;
-use icrc_ledger_types::icrc3::transactions::Mint;
 
 use std::cmp::{min, Ordering};
 use std::time::Duration;
@@ -74,6 +73,7 @@ async fn mint_cketh() {
 /// was no error when querying the providers, otherwise returns `None`.
 async fn scrape_eth_logs_range_inclusive(
     contract_address: Address,
+    minter_address: Address,
     from: BlockNumber,
     to: BlockNumber,
 ) -> Option<BlockNumber> {
@@ -88,7 +88,7 @@ async fn scrape_eth_logs_range_inclusive(
             let mut last_block_number = min(max_to, to);
             log!(
                 DEBUG,
-                "Scrapping ETH logs from block {:?} to block {:?}...",
+                "Scraping ETH logs from block {:?} to block {:?}...",
                 from,
                 last_block_number
             );
@@ -96,6 +96,7 @@ async fn scrape_eth_logs_range_inclusive(
             let (mint_events, errors) = loop {
                 match crate::eth_logs::last_received_eth_events(
                     contract_address,
+                    minter_address,
                     from,
                     last_block_number,
                 )
@@ -145,11 +146,11 @@ async fn scrape_eth_logs_range_inclusive(
                 ic_cdk_timers::set_timer(Duration::from_secs(0), || ic_cdk::spawn(mint_cketh()));
             }
             for error in errors {
-                if let TransferEventError::InvalidEventSource { source, error } = &error {
+                if let MintEventError::InvalidEventSource { source, error } = &error {
                     mutate_state(|s| {
                         process_event(
                             s,
-                            EventType::InvalidTransfer {
+                            EventType::InvalidMint {
                                 event_source: *source,
                                 reason: error.to_string(),
                             },
@@ -176,12 +177,13 @@ pub async fn scrape_eth_logs() {
         Err(_) => return,
     };
     let contract_address = read_state(|s| s.ethereum_contract_address);
+    let minter_address = read_state(|s| s.minter_address);
     let last_block_number = match update_last_observed_block_number().await {
         Some(block_number) => block_number,
         None => {
             log!(
                 DEBUG,
-                "[scrape_eth_logs]: skipping scrapping ETH logs: no last observed block number"
+                "[scrape_eth_logs]: skipping scraping ETH logs: no last observed block number"
             );
             return;
         }
@@ -194,6 +196,7 @@ pub async fn scrape_eth_logs() {
             .unwrap_or(BlockNumber::MAX);
         last_scraped_block_number = match scrape_eth_logs_range_inclusive(
             contract_address,
+            minter_address,
             next_block_to_query,
             last_block_number,
         )
