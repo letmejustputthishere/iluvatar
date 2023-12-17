@@ -13,13 +13,13 @@ use ic_canister_log::log;
 use std::cmp::{min, Ordering};
 use std::time::Duration;
 
-async fn mint_cketh() {
-    let _guard = match TimerGuard::new(TaskType::MintCkEth) {
+async fn generate_metadata_and_assets() {
+    let _guard = match TimerGuard::new(TaskType::GenerateMetadataAndAssets) {
         Ok(guard) => guard,
         Err(_) => return,
     };
 
-    let events = read_state(|s| (s.events_to_mint.clone()));
+    let events = read_state(|s| (s.events_to_generate.clone()));
 
     let error_count = 0;
 
@@ -50,7 +50,7 @@ async fn mint_cketh() {
         //         continue;
         //     }
         // };
-        mutate_state(|s| process_event(s, EventType::MintedNft { event_source }));
+        mutate_state(|s| process_event(s, EventType::GeneratedMetadataAndAssets { event_source }));
         log!(
             INFO,
             "generated metadata and assets for token id {}",
@@ -63,7 +63,7 @@ async fn mint_cketh() {
             INFO,
             "Failed to mint {error_count} events, rescheduling the minting"
         );
-        ic_cdk_timers::set_timer(crate::MINT_RETRY_DELAY, || ic_cdk::spawn(mint_cketh()));
+        ic_cdk_timers::set_timer(crate::MINT_RETRY_DELAY, || ic_cdk::spawn(generate_metadata_and_assets()));
     }
 }
 
@@ -143,7 +143,7 @@ async fn scrape_eth_logs_range_inclusive(
                 mutate_state(|s| process_event(s, EventType::AcceptedMint(mint)));
             }
             if read_state(State::has_events_to_mint) {
-                ic_cdk_timers::set_timer(Duration::from_secs(0), || ic_cdk::spawn(mint_cketh()));
+                ic_cdk_timers::set_timer(Duration::from_secs(0), || ic_cdk::spawn(generate_metadata_and_assets()));
             }
             for error in errors {
                 if let MintEventError::InvalidEventSource { source, error } = &error {

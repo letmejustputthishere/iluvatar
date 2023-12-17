@@ -75,17 +75,17 @@ mod mint_transaction {
 
         state.record_event_to_mint(&event);
 
-        assert!(state.events_to_mint.contains_key(&event.source()));
+        assert!(state.events_to_generate.contains_key(&event.source()));
 
         let minted_event = MintedEvent {
             mint_event: event.clone(),
         };
 
-        state.record_successful_mint(event.source());
+        state.record_successful_generation(event.source());
 
-        assert!(!state.events_to_mint.contains_key(&event.source()));
+        assert!(!state.events_to_generate.contains_key(&event.source()));
         assert_eq!(
-            state.minted_events.get(&event.source()),
+            state.generated_events.get(&event.source()),
             Some(&minted_event)
         );
     }
@@ -106,13 +106,13 @@ mod mint_transaction {
 
         state.record_event_to_mint(&event_1);
 
-        assert!(state.events_to_mint.contains_key(&event_1.source()));
+        assert!(state.events_to_generate.contains_key(&event_1.source()));
 
         state.record_event_to_mint(&event_2);
 
-        assert!(state.events_to_mint.contains_key(&event_2.source()));
+        assert!(state.events_to_generate.contains_key(&event_2.source()));
 
-        assert_eq!(2, state.events_to_mint.len());
+        assert_eq!(2, state.events_to_generate.len());
     }
 
     #[test]
@@ -121,8 +121,8 @@ mod mint_transaction {
         let mut state = dummy_state();
         let event = received_eth_event();
 
-        assert!(!state.events_to_mint.contains_key(&event.source()));
-        state.record_successful_mint(event.source());
+        assert!(!state.events_to_generate.contains_key(&event.source()));
+        state.record_successful_generation(event.source());
     }
 
     #[test]
@@ -133,7 +133,7 @@ mod mint_transaction {
 
         state.record_event_to_mint(&event);
 
-        assert!(state.events_to_mint.contains_key(&event.source()));
+        assert!(state.events_to_generate.contains_key(&event.source()));
 
         state.record_invalid_deposit(
             event.source(),
@@ -495,7 +495,7 @@ fn arb_event_type() -> impl Strategy<Value = EventType> {
             event_source,
             reason: "bad principal".to_string()
         }),
-        (arb_event_source()).prop_map(|(event_source)| { EventType::MintedNft { event_source } }),
+        (arb_event_source()).prop_map(|(event_source)| { EventType::GeneratedMetadataAndAssets { event_source } }),
         arb_checked_amount_of().prop_map(|block_number| EventType::SyncedToBlock { block_number }),
         (any::<u64>(), arb_unsigned_tx()).prop_map(|(withdrawal_id, transaction)| {
             EventType::CreatedTransaction {
@@ -719,7 +719,7 @@ fn state_equivalence() {
         first_scraped_block_number: BlockNumber::new(1_000_001),
         last_scraped_block_number: BlockNumber::new(1_000_000),
         last_observed_block_number: Some(BlockNumber::new(2_000_000)),
-        events_to_mint: btreemap! {
+        events_to_generate: btreemap! {
             source("0xac493fb20c93bd3519a4a5d90ce72d69455c41c5b7e229dafee44344242ba467", 100) => MintEvent {
                 transaction_hash: "0xac493fb20c93bd3519a4a5d90ce72d69455c41c5b7e229dafee44344242ba467".parse().unwrap(),
                 block_number: BlockNumber::new(500_000),
@@ -729,7 +729,7 @@ fn state_equivalence() {
                 token_id : TokenId::from(1u64)
             }
         },
-        minted_events: btreemap! {
+        generated_events: btreemap! {
             source("0x705f826861c802b407843e99af986cfde8749b669e5e0a5a150f4350bcaa9bc3", 1) => MintedEvent {
                 mint_event: MintEvent {
                     transaction_hash: "0x705f826861c802b407843e99af986cfde8749b669e5e0a5a150f4350bcaa9bc3".parse().unwrap(),
@@ -820,7 +820,7 @@ fn state_equivalence() {
     assert_ne!(
         Ok(()),
         state.is_equivalent_to(&State {
-            events_to_mint: Default::default(),
+            events_to_generate: Default::default(),
             ..state.clone()
         }),
         "changing essential fields should break equivalence",
@@ -829,7 +829,7 @@ fn state_equivalence() {
     assert_ne!(
         Ok(()),
         state.is_equivalent_to(&State {
-            minted_events: Default::default(),
+            generated_events: Default::default(),
             ..state.clone()
         }),
         "changing essential fields should break equivalence",

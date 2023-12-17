@@ -151,13 +151,13 @@ fn should_display_minted_events_sorted_by_decreasing_mint_block_index() {
         apply_state_transition(&mut state, &EventType::AcceptedMint(event_2.clone()));
         apply_state_transition(
             &mut state,
-            &EventType::MintedNft {
+            &EventType::GeneratedMetadataAndAssets {
                 event_source: event_1.source(),
             },
         );
         apply_state_transition(
             &mut state,
-            &EventType::MintedNft {
+            &EventType::GeneratedMetadataAndAssets {
                 event_source: event_2.source(),
             },
         );
@@ -369,7 +369,7 @@ fn should_display_finalized_transactions_sorted_by_decreasing_ledger_burn_index(
         apply_state_transition(&mut state, &EventType::AcceptedMint(deposit.clone()));
         apply_state_transition(
             &mut state,
-            &EventType::MintedNft {
+            &EventType::GeneratedMetadataAndAssets {
                 event_source: deposit.source(),
             },
         );
@@ -480,7 +480,7 @@ fn should_display_reimbursed_requests() {
         apply_state_transition(&mut state, &EventType::AcceptedMint(deposit.clone()));
         apply_state_transition(
             &mut state,
-            &EventType::MintedNft {
+            &EventType::GeneratedMetadataAndAssets {
                 event_source: deposit.source(),
             },
         );

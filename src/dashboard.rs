@@ -25,9 +25,9 @@ pub struct DashboardTemplate {
 
 impl DashboardTemplate {
     pub fn from_state(state: &State) -> Self {
-        let mut minted_events: Vec<_> = state.minted_events.values().cloned().collect();
+        let mut minted_events: Vec<_> = state.generated_events.values().cloned().collect();
         minted_events.sort_unstable_by_key(|event| Reverse(event.mint_event.token_id));
-        let mut events_to_mint: Vec<_> = state.events_to_mint.values().cloned().collect();
+        let mut events_to_mint: Vec<_> = state.events_to_generate.values().cloned().collect();
         events_to_mint.sort_unstable_by_key(|event| Reverse(event.block_number));
 
         DashboardTemplate {

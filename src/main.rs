@@ -15,7 +15,7 @@ use ic_cketh_minter::logs::INFO;
 
 use ic_cketh_minter::state::audit::{Event, EventType};
 use ic_cketh_minter::state::{read_state, State, STATE};
-use ic_cketh_minter::{storage, SCRAPPING_ETH_LOGS_INTERVAL};
+use ic_cketh_minter::{storage, SCRAPING_ETH_LOGS_INTERVAL};
 
 use std::time::Duration;
 
@@ -25,7 +25,7 @@ pub const SEPOLIA_TEST_CHAIN_ID: u64 = 11155111;
 fn setup_timers() {
     // Start scraping logs immediately after the install, then repeat with the interval.
     ic_cdk_timers::set_timer(Duration::from_secs(0), || ic_cdk::spawn(scrape_eth_logs()));
-    ic_cdk_timers::set_timer_interval(SCRAPPING_ETH_LOGS_INTERVAL, || {
+    ic_cdk_timers::set_timer_interval(SCRAPING_ETH_LOGS_INTERVAL, || {
         ic_cdk::spawn(scrape_eth_logs())
     });
 }
@@ -146,7 +146,7 @@ fn get_events(arg: GetEventsArg) -> GetEventsResult {
                     event_source: map_event_source(event_source),
                     reason,
                 },
-                EventType::MintedNft { event_source } => EP::MintedNft {
+                EventType::GeneratedMetadataAndAssets { event_source } => EP::MintedNft {
                     event_source: map_event_source(event_source),
                 },
                 EventType::SyncedToBlock { block_number } => EP::SyncedToBlock {
@@ -224,7 +224,7 @@ fn http_request(req: HttpRequest) -> HttpResponse {
                     "cketh_minter_accepted_deposits",
                     "The number of deposits the ckETH minter processed, by status.",
                 )?
-                .value(&[("status", "accepted")], s.minted_events.len() as f64)?
+                .value(&[("status", "accepted")], s.generated_events.len() as f64)?
                 .value(&[("status", "rejected")], s.invalid_events.len() as f64)?;
 
                 w.encode_gauge(

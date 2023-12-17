@@ -40,8 +40,8 @@ pub struct State {
     pub first_scraped_block_number: BlockNumber,
     pub last_scraped_block_number: BlockNumber,
     pub last_observed_block_number: Option<BlockNumber>,
-    pub events_to_mint: BTreeMap<EventSource, MintEvent>,
-    pub minted_events: BTreeMap<EventSource, MintedEvent>,
+    pub events_to_generate: BTreeMap<EventSource, MintEvent>,
+    pub generated_events: BTreeMap<EventSource, MintedEvent>,
     pub invalid_events: BTreeMap<EventSource, String>,
     pub skipped_blocks: BTreeSet<BlockNumber>,
 
@@ -77,26 +77,26 @@ impl State {
     fn record_event_to_mint(&mut self, event: &MintEvent) {
         let event_source = event.source();
         assert!(
-            !self.events_to_mint.contains_key(&event_source),
+            !self.events_to_generate.contains_key(&event_source),
             "there must be no two different events with the same source"
         );
-        assert!(!self.minted_events.contains_key(&event_source));
+        assert!(!self.generated_events.contains_key(&event_source));
         assert!(!self.invalid_events.contains_key(&event_source));
 
-        self.events_to_mint.insert(event_source, event.clone());
+        self.events_to_generate.insert(event_source, event.clone());
     }
 
     pub fn has_events_to_mint(&self) -> bool {
-        !self.events_to_mint.is_empty()
+        !self.events_to_generate.is_empty()
     }
 
     fn record_invalid_deposit(&mut self, source: EventSource, error: String) -> bool {
         assert!(
-            !self.events_to_mint.contains_key(&source),
+            !self.events_to_generate.contains_key(&source),
             "attempted to mark an accepted event as invalid"
         );
         assert!(
-            !self.minted_events.contains_key(&source),
+            !self.generated_events.contains_key(&source),
             "attempted to mark a minted event {source:?} as invalid"
         );
 
@@ -109,18 +109,18 @@ impl State {
         }
     }
 
-    fn record_successful_mint(&mut self, source: EventSource) {
+    fn record_successful_generation(&mut self, source: EventSource) {
         assert!(
             !self.invalid_events.contains_key(&source),
             "attempted to mint an event previously marked as invalid {source:?}"
         );
-        let mint_event = match self.events_to_mint.remove(&source) {
+        let mint_event = match self.events_to_generate.remove(&source) {
             Some(event) => event,
             None => panic!("attempted to mint ckETH for an unknown event {source:?}"),
         };
 
         assert_eq!(
-            self.minted_events
+            self.generated_events
                 .insert(source, MintedEvent { mint_event }),
             None,
             "attempted to mint ckETH twice for the same event {source:?}"
@@ -195,8 +195,8 @@ impl State {
             other.last_scraped_block_number
         );
         ensure_eq!(self.ethereum_block_height, other.ethereum_block_height);
-        ensure_eq!(self.events_to_mint, other.events_to_mint);
-        ensure_eq!(self.minted_events, other.minted_events);
+        ensure_eq!(self.events_to_generate, other.events_to_generate);
+        ensure_eq!(self.generated_events, other.generated_events);
         ensure_eq!(self.invalid_events, other.invalid_events);
         Ok(())
     }
@@ -222,7 +222,7 @@ where
 
 #[derive(Debug, Hash, Copy, Clone, PartialEq, Eq, EnumIter)]
 pub enum TaskType {
-    MintCkEth,
+    GenerateMetadataAndAssets,
     RetrieveEth,
     ScrapEthLogs,
     Reimbursement,

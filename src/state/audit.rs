@@ -24,8 +24,8 @@ pub fn apply_state_transition(state: &mut State, payload: &EventType) {
         } => {
             let _ = state.record_invalid_deposit(*event_source, reason.clone());
         }
-        EventType::MintedNft { event_source } => {
-            state.record_successful_mint(*event_source);
+        EventType::GeneratedMetadataAndAssets { event_source } => {
+            state.record_successful_generation(*event_source);
         }
         EventType::SyncedToBlock { block_number } => {
             state.last_scraped_block_number = *block_number;

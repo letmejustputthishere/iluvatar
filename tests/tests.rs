@@ -22,7 +22,7 @@ use ic_cketh_minter::memo::{BurnMemo, MintMemo};
 use ic_cketh_minter::numeric::{BlockNumber, TokenId};
 use ic_cketh_minter::{
     PROCESS_ETH_RETRIEVE_TRANSACTIONS_INTERVAL, PROCESS_ETH_RETRIEVE_TRANSACTIONS_RETRY_INTERVAL,
-    PROCESS_REIMBURSEMENT, SCRAPPING_ETH_LOGS_INTERVAL,
+    PROCESS_REIMBURSEMENT, SCRAPING_ETH_LOGS_INTERVAL,
 };
 use ic_icrc1_ledger::{InitArgsBuilder as LedgerInitArgsBuilder, LedgerArgument};
 use ic_state_machine_tests::{Cycles, MessageId, StateMachine, StateMachineBuilder, WasmResult};
@@ -721,7 +721,7 @@ fn should_resubmit_new_transaction_when_price_increased() {
 fn should_not_overlap_when_scrapping_logs() {
     let cketh = CkEthSetup::new();
 
-    cketh.env.advance_time(SCRAPPING_ETH_LOGS_INTERVAL);
+    cketh.env.advance_time(SCRAPING_ETH_LOGS_INTERVAL);
     MockJsonRpcProviders::when(JsonRpcMethod::EthGetBlockByNumber)
         .respond_for_all_with(block_response(DEFAULT_BLOCK_NUMBER))
         .build()
@@ -770,7 +770,7 @@ fn should_not_overlap_when_scrapping_logs() {
 fn should_retry_from_same_block_when_scrapping_fails() {
     let cketh = CkEthSetup::new();
 
-    cketh.env.advance_time(SCRAPPING_ETH_LOGS_INTERVAL);
+    cketh.env.advance_time(SCRAPING_ETH_LOGS_INTERVAL);
     MockJsonRpcProviders::when(JsonRpcMethod::EthGetBlockByNumber)
         .respond_for_all_with(block_response(DEFAULT_BLOCK_NUMBER))
         .build()
@@ -797,7 +797,7 @@ fn should_retry_from_same_block_when_scrapping_fails() {
             block_number: LAST_SCRAPED_BLOCK_NUMBER_AT_INSTALL.into(),
         }]);
 
-    cketh.env.advance_time(SCRAPPING_ETH_LOGS_INTERVAL);
+    cketh.env.advance_time(SCRAPING_ETH_LOGS_INTERVAL);
     MockJsonRpcProviders::when(JsonRpcMethod::EthGetBlockByNumber)
         .respond_for_all_with(block_response(DEFAULT_BLOCK_NUMBER))
         .build()
@@ -824,7 +824,7 @@ fn should_retry_from_same_block_when_scrapping_fails() {
 fn should_scrap_one_block_when_at_boundary_with_last_finalized_block() {
     let cketh = CkEthSetup::new();
 
-    cketh.env.advance_time(SCRAPPING_ETH_LOGS_INTERVAL);
+    cketh.env.advance_time(SCRAPING_ETH_LOGS_INTERVAL);
     MockJsonRpcProviders::when(JsonRpcMethod::EthGetBlockByNumber)
         .respond_for_all_with(block_response(LAST_SCRAPED_BLOCK_NUMBER_AT_INSTALL + 1))
         .build()
@@ -846,7 +846,7 @@ fn should_scrap_one_block_when_at_boundary_with_last_finalized_block() {
 fn should_panic_when_last_finalized_block_in_the_past() {
     let cketh = CkEthSetup::new();
 
-    cketh.env.advance_time(SCRAPPING_ETH_LOGS_INTERVAL);
+    cketh.env.advance_time(SCRAPING_ETH_LOGS_INTERVAL);
     MockJsonRpcProviders::when(JsonRpcMethod::EthGetBlockByNumber)
         .respond_for_all_with(block_response(LAST_SCRAPED_BLOCK_NUMBER_AT_INSTALL - 1))
         .build()
@@ -859,7 +859,7 @@ fn should_panic_when_last_finalized_block_in_the_past() {
         }]);
 
     let last_finalized_block = LAST_SCRAPED_BLOCK_NUMBER_AT_INSTALL + 10;
-    cketh.env.advance_time(SCRAPPING_ETH_LOGS_INTERVAL);
+    cketh.env.advance_time(SCRAPING_ETH_LOGS_INTERVAL);
     MockJsonRpcProviders::when(JsonRpcMethod::EthGetBlockByNumber)
         .respond_for_all_with(block_response(last_finalized_block))
         .build()
@@ -1826,7 +1826,7 @@ impl DepositFlow {
     // }
 
     fn handle_deposit(&mut self) {
-        self.setup.env.advance_time(SCRAPPING_ETH_LOGS_INTERVAL);
+        self.setup.env.advance_time(SCRAPING_ETH_LOGS_INTERVAL);
 
         let default_get_block_by_number =
             MockJsonRpcProviders::when(JsonRpcMethod::EthGetBlockByNumber)
@@ -1835,7 +1835,7 @@ impl DepositFlow {
             .build()
             .expect_rpc_calls(&self.setup);
 
-        self.setup.env.advance_time(SCRAPPING_ETH_LOGS_INTERVAL);
+        self.setup.env.advance_time(SCRAPING_ETH_LOGS_INTERVAL);
 
         let default_eth_get_logs = MockJsonRpcProviders::when(JsonRpcMethod::EthGetLogs)
             .respond_for_all_with(vec![self.params.eth_log()]);

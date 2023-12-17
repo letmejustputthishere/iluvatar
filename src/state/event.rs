@@ -30,7 +30,7 @@ pub enum EventType {
     },
     /// The minter minted ckETH in response to a deposit.
     #[n(5)]
-    MintedNft {
+    GeneratedMetadataAndAssets {
         /// The unique identifier of the deposit on the Ethereum network.
         #[n(0)]
         event_source: EventSource,
