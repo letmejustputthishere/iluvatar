@@ -3,7 +3,6 @@ use ic_canister_log::log;
 use ic_canisters_http_types::{HttpRequest, HttpResponse, HttpResponseBuilder};
 use ic_cdk_macros::{init, post_upgrade, pre_upgrade, query, update};
 
-use ic_cketh_minter::assets::{Asset, AssetWithPath};
 use ic_cketh_minter::endpoints::events::{
     Event as CandidEvent, EventSource as CandidEventSource, GetEventsArg, GetEventsResult,
 };
@@ -17,69 +16,20 @@ use ic_cketh_minter::logs::INFO;
 use ic_cketh_minter::state::audit::{Event, EventType};
 use ic_cketh_minter::state::{read_state, State, STATE};
 use ic_cketh_minter::{storage, SCRAPING_ETH_LOGS_INTERVAL};
-use image::codecs::png::PngEncoder;
-use image::{ColorType, ImageBuffer, ImageEncoder, Rgb, RgbImage};
-use serde_json::{json, to_vec};
 
 use std::time::Duration;
 
 mod dashboard;
+mod generator;
 pub const SEPOLIA_TEST_CHAIN_ID: u64 = 11155111;
-
-fn generator(randomness: [u8; 32], event: MintEvent) -> Vec<AssetWithPath> {
-    // create vector to hold assets
-    let mut assets: Vec<AssetWithPath> = Vec::new();
-
-    // create JSON metadata with serde_json
-    let json_literal = json!({
-        "name": "John Doe",
-        "age": 30,
-        "is_admin": false,
-        "phones": ["+44 1234567", "+44 2345678"]
-    });
-
-    // Serialize the JSON value to a Vec<u8>
-    let byte_vec: Vec<u8> = match to_vec(&json_literal) {
-        Ok(vec) => vec,
-        Err(_) => {
-            ic_cdk::trap("Failed to serialize JSON");
-        }
-    };
-    // return Asset
-    let metadata = AssetWithPath {
-        path: format!("/metadata/{}.json", event.token_id),
-        bytes: byte_vec,
-        headers: vec![("Content-Type".to_string(), "application/json".to_string())],
-    };
-    assets.push(metadata);
-
-    // Create a black image
-    let mut img: RgbImage = ImageBuffer::new(100, 100);
-    img.fill(1);
-
-    // Serialize the image to PNG format
-    let mut bytes: Vec<u8> = Vec::new();
-    PngEncoder::new(&mut bytes)
-        .write_image(&img, img.width(), img.height(), ColorType::Rgb8)
-        .expect("Failed to encode the image as PNG");
-
-    let image = AssetWithPath {
-        path: format!("/media/{}.png", event.token_id),
-        bytes,
-        headers: vec![("Content-Type".into(), "image/png".into())],
-    };
-    assets.push(image);
-
-    assets
-}
 
 fn setup_timers() {
     // Start scraping logs immediately after the install, then repeat with the interval.
     ic_cdk_timers::set_timer(Duration::from_secs(0), || {
-        ic_cdk::spawn(scrape_eth_logs(generator))
+        ic_cdk::spawn(scrape_eth_logs(generator::generator))
     });
     ic_cdk_timers::set_timer_interval(SCRAPING_ETH_LOGS_INTERVAL, || {
-        ic_cdk::spawn(scrape_eth_logs(generator))
+        ic_cdk::spawn(scrape_eth_logs(generator::generator))
     });
 }
 
@@ -131,7 +81,7 @@ fn post_upgrade(minter_arg: Option<MinterArg>) {
 #[query]
 #[candid_method(query)]
 async fn smart_contract_address() -> String {
-    read_state(|s| s.ethereum_contract_address).to_string()
+    read_state(|s| s.contract_address).to_string()
 }
 
 #[query]
@@ -199,7 +149,7 @@ fn get_events(arg: GetEventsArg) -> GetEventsResult {
                     event_source: map_event_source(event_source),
                     reason,
                 },
-                EventType::GeneratedMetadataAndAssets { event_source } => EP::MintedNft {
+                EventType::GeneratedAssets { event_source } => EP::MintedNft {
                     event_source: map_event_source(event_source),
                 },
                 EventType::SyncedToBlock { block_number } => EP::SyncedToBlock {

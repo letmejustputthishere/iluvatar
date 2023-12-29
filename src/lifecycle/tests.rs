@@ -26,7 +26,7 @@ mod init {
 
         assert_matches!(
             State::try_from(InitArg {
-                ethereum_contract_address: Some("invalid".to_string()),
+                contract_address: Some("invalid".to_string()),
                 ..valid_init_arg()
             }),
             Err(InvalidStateError::InvalidEthereumContractAddress(_))
@@ -34,7 +34,7 @@ mod init {
 
         assert_matches!(
             State::try_from(InitArg {
-                ethereum_contract_address: Some(
+                contract_address: Some(
                     "0x0000000000000000000000000000000000000000".to_string(),
                 ),
                 ..valid_init_arg()
@@ -77,9 +77,9 @@ mod init {
 
         let state = State::try_from(init_arg.clone()).expect("valid init args");
 
-        assert_eq!(state.ethereum_network, init_arg.ethereum_network);
+        assert_eq!(state.network, init_arg.network);
         assert_eq!(state.ecdsa_key_name, init_arg.ecdsa_key_name);
-        assert_eq!(state.ethereum_contract_address, None);
+        assert_eq!(state.contract_address, None);
         assert_eq!(state.ledger_id, init_arg.ledger_id);
         assert_eq!(state.minimum_withdrawal_amount, Wei::TWO);
         assert_eq!(
@@ -90,12 +90,12 @@ mod init {
 
     fn valid_init_arg() -> InitArg {
         InitArg {
-            ethereum_network: Default::default(),
+            network: Default::default(),
             ecdsa_key_name: "test_key_1".to_string(),
-            ethereum_contract_address: None,
+            contract_address: None,
             ledger_id: Principal::from_text("apia6-jaaaa-aaaar-qabma-cai")
                 .expect("BUG: invalid principal"),
-            ethereum_block_height: Default::default(),
+            block_height: Default::default(),
             minimum_withdrawal_amount: Wei::TWO.into(),
             next_transaction_nonce: TransactionNonce::ZERO.into(),
             last_scraped_block_number: Default::default(),

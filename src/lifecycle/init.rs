@@ -1,7 +1,7 @@
 use crate::address::Address;
 use crate::endpoints::CandidBlockTag;
 use crate::eth_rpc::BlockTag;
-use crate::lifecycle::EthereumNetwork;
+use crate::lifecycle::Network;
 use crate::numeric::BlockNumber;
 use crate::state::{InvalidStateError, State};
 use candid::types::number::Nat;
@@ -11,13 +11,13 @@ use minicbor::{Decode, Encode};
 #[derive(CandidType, Deserialize, Clone, Debug, Encode, Decode, PartialEq, Eq)]
 pub struct InitArg {
     #[n(0)]
-    pub ethereum_network: EthereumNetwork,
+    pub network: Network,
     #[n(1)]
     pub minter_address: Option<String>,
     #[n(2)]
-    pub ethereum_contract_address: String,
+    pub contract_address: String,
     #[n(3)]
-    pub ethereum_block_height: CandidBlockTag,
+    pub block_height: CandidBlockTag,
     #[cbor(n(4), with = "crate::cbor::nat")]
     pub last_scraped_block_number: Nat,
 }
@@ -27,17 +27,17 @@ impl TryFrom<InitArg> for State {
 
     fn try_from(
         InitArg {
-            ethereum_network,
+            network,
             minter_address,
-            ethereum_contract_address,
-            ethereum_block_height,
+            contract_address,
+            block_height: ethereum_block_height,
             last_scraped_block_number,
         }: InitArg,
     ) -> Result<Self, Self::Error> {
         use std::str::FromStr;
 
         let ethereum_contract_address =
-            Address::from_str(&ethereum_contract_address).map_err(|e| {
+            Address::from_str(&contract_address).map_err(|e| {
                 InvalidStateError::InvalidEthereumContractAddress(format!("ERROR: {}", e))
             })?;
         let minter_address = minter_address.map_or_else(
@@ -63,10 +63,10 @@ impl TryFrom<InitArg> for State {
                     )
                 })?;
         let state = Self {
-            ethereum_network,
+            network,
             minter_address,
-            ethereum_contract_address,
-            ethereum_block_height: BlockTag::from(ethereum_block_height),
+            contract_address: ethereum_contract_address,
+            block_height: BlockTag::from(ethereum_block_height),
             first_scraped_block_number,
             last_scraped_block_number,
             last_observed_block_number: None,

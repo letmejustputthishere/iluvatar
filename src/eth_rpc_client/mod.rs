@@ -2,10 +2,10 @@ use crate::eth_rpc::{
     self, are_errors_consistent, Block, BlockSpec, GetLogsParam, Hash, HttpOutcallError,
     HttpOutcallResult, HttpResponsePayload, JsonRpcResult, LogEntry, ResponseSizeEstimate,
 };
-use crate::eth_rpc_client::providers::{RpcNodeProvider, MAINNET_PROVIDERS, SEPOLIA_PROVIDERS};
+use crate::eth_rpc_client::providers::{RpcNodeProvider, ETHEREUM_MAINNET_PROVIDERS, ETHEREUM_SEPOLIA_PROVIDERS};
 
 use crate::eth_rpc_client::responses::TransactionReceipt;
-use crate::lifecycle::EthereumNetwork;
+use crate::lifecycle::Network;
 use crate::logs::{DEBUG, INFO};
 
 use crate::state::State;
@@ -22,12 +22,12 @@ pub mod responses;
 mod tests;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct EthRpcClient {
-    chain: EthereumNetwork,
+pub struct RpcClient {
+    chain: Network,
 }
 
-impl EthRpcClient {
-    const fn new(chain: EthereumNetwork) -> Self {
+impl RpcClient {
+    const fn new(chain: Network) -> Self {
         Self { chain }
     }
 
@@ -37,8 +37,10 @@ impl EthRpcClient {
 
     fn providers(&self) -> &[RpcNodeProvider] {
         match self.chain {
-            EthereumNetwork::Mainnet => &MAINNET_PROVIDERS,
-            EthereumNetwork::Sepolia => &SEPOLIA_PROVIDERS,
+            Network::EthereumMainnet => &ETHEREUM_MAINNET_PROVIDERS,
+            Network::EthereumSepolia => &ETHEREUM_SEPOLIA_PROVIDERS,
+            Network::AvalancheMainnet => &providers::AVALANCHE_MAINNET_PROVIDERS,
+            Network::AvalancheFuji => &providers::AVALANCHE_FUJI_PROVIDERS,
         }
     }
 
@@ -139,8 +141,10 @@ impl EthRpcClient {
         use crate::eth_rpc::GetBlockByNumberParams;
 
         let expected_block_size = match self.chain {
-            EthereumNetwork::Sepolia => 12 * 1024,
-            EthereumNetwork::Mainnet => 24 * 1024,
+            Network::EthereumSepolia => 12 * 1024,
+            Network::EthereumMainnet => 24 * 1024,
+            Network::AvalancheMainnet => 100 * 1024,
+            Network::AvalancheFuji => 100 * 1024,
         };
 
         let results: MultiCallResults<Block> = self

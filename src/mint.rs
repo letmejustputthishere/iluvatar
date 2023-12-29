@@ -2,7 +2,7 @@ use crate::address::Address;
 use crate::assets::{Asset, AssetWithPath};
 use crate::eth_logs::{report_transaction_error, MintEvent, MintEventError};
 use crate::eth_rpc::{BlockSpec, HttpOutcallError};
-use crate::eth_rpc_client::EthRpcClient;
+use crate::eth_rpc_client::RpcClient;
 use crate::guard::TimerGuard;
 use crate::logs::{DEBUG, INFO};
 use crate::numeric::BlockNumber;
@@ -70,7 +70,7 @@ async fn generate_assets(generator: fn([u8; 32], MintEvent) -> Vec<AssetWithPath
         //         continue;
         //     }
         // };
-        mutate_state(|s| process_event(s, EventType::GeneratedMetadataAndAssets { event_source }));
+        mutate_state(|s| process_event(s, EventType::GeneratedAssets { event_source }));
         log!(
             INFO,
             "generated metadata and assets for token id {}",
@@ -201,7 +201,7 @@ pub async fn scrape_eth_logs(generator: fn([u8; 32], MintEvent) -> Vec<AssetWith
         Ok(guard) => guard,
         Err(_) => return,
     };
-    let contract_address = read_state(|s| s.ethereum_contract_address);
+    let contract_address = read_state(|s| s.contract_address);
     let minter_address = read_state(|s| s.minter_address);
     let last_block_number = match update_last_observed_block_number().await {
         Some(block_number) => block_number,
@@ -238,7 +238,7 @@ pub async fn scrape_eth_logs(generator: fn([u8; 32], MintEvent) -> Vec<AssetWith
 
 pub async fn update_last_observed_block_number() -> Option<BlockNumber> {
     let block_height = read_state(State::ethereum_block_height);
-    match read_state(EthRpcClient::from_state)
+    match read_state(RpcClient::from_state)
         .eth_get_block_by_number(BlockSpec::Tag(block_height))
         .await
     {

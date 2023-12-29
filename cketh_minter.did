@@ -1,8 +1,12 @@
-type EthereumNetwork = variant {
+type Network = variant {
     // The public Ethereum mainnet.
-    Mainnet;
+    EthereumMainnet;
     // The public Ethereum Sepolia testnet.
-    Sepolia;
+    EthereumSepolia;
+    // The public Avalanche mainnet.
+    AvalancheMainnet;
+    // The public Avalanche Fuji testnet.
+    AvalancheFuji;
 };
 
 type CanisterStatusResponse = record {
@@ -37,17 +41,17 @@ type BlockTag = variant {
 // The initialization parameters of the minter canister.
 type InitArg = record {
     // The minter will interact with this Ethereum network.
-    ethereum_network : EthereumNetwork;
+    network : Network;
 
     // Address of the helper smart contract.
-    ethereum_contract_address : text;
+    contract_address : text;
     
     // Address of the minter account.
     // Defaults to the ZERO address if not specified.
     minter_address : opt text;
 
     // Determine ethereum block height observed by minter.
-    ethereum_block_height: BlockTag;
+    block_height: BlockTag;
 
     // Block number to start scrapping from on the Ethereum network.
     // Scrapping the logs will resume at `last_scraped_block_number + 1` (inclusive).

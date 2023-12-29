@@ -136,12 +136,12 @@ fn init_state() {
     crate::state::STATE.with(|s| {
         *s.borrow_mut() = Some(
             State::try_from(InitArg {
-                ethereum_network: Default::default(),
+                network: Default::default(),
                 ecdsa_key_name: "test_key_1".to_string(),
-                ethereum_contract_address: None,
+                contract_address: None,
                 ledger_id: Principal::from_text("apia6-jaaaa-aaaar-qabma-cai")
                     .expect("BUG: invalid principal"),
-                ethereum_block_height: Default::default(),
+                block_height: Default::default(),
                 minimum_withdrawal_amount: wei_from_milli_ether(10).into(),
                 next_transaction_nonce: Default::default(),
                 last_scraped_block_number: Default::default(),

@@ -16,7 +16,7 @@ use ic_cketh_minter::endpoints::{
     WithdrawalArg, WithdrawalError,
 };
 use ic_cketh_minter::lifecycle::upgrade::UpgradeArg;
-use ic_cketh_minter::lifecycle::{init::InitArg as MinterInitArgs, EthereumNetwork, MinterArg};
+use ic_cketh_minter::lifecycle::{init::InitArg as MinterInitArgs, Network, MinterArg};
 use ic_cketh_minter::logs::Log;
 use ic_cketh_minter::memo::{BurnMemo, MintMemo};
 use ic_cketh_minter::numeric::{BlockNumber, TokenId};
@@ -1116,11 +1116,11 @@ fn minter_wasm() -> Vec<u8> {
 fn install_minter(env: &StateMachine, ledger_id: CanisterId, minter_id: CanisterId) -> CanisterId {
     let args = MinterInitArgs {
         ecdsa_key_name: "master_ecdsa_public_key".parse().unwrap(),
-        ethereum_network: EthereumNetwork::Mainnet,
+        network: Network::EthereumMainnet,
         ledger_id: ledger_id.get().0,
         next_transaction_nonce: 0.into(),
-        ethereum_block_height: CandidBlockTag::Finalized,
-        ethereum_contract_address: Some(HELPER_SMART_CONTRACT_ADDRESS.to_string()),
+        block_height: CandidBlockTag::Finalized,
+        contract_address: Some(HELPER_SMART_CONTRACT_ADDRESS.to_string()),
         minimum_withdrawal_amount: CKETH_TRANSFER_FEE.into(),
         last_scraped_block_number: LAST_SCRAPED_BLOCK_NUMBER_AT_INSTALL.into(),
     };

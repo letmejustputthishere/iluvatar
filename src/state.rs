@@ -3,7 +3,7 @@ use crate::eth_logs::{EventSource, MintEvent};
 use crate::eth_rpc::BlockTag;
 
 use crate::lifecycle::upgrade::UpgradeArg;
-use crate::lifecycle::EthereumNetwork;
+use crate::lifecycle::Network;
 use crate::numeric::BlockNumber;
 
 use std::cell::RefCell;
@@ -33,10 +33,10 @@ impl MintedEvent {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct State {
-    pub ethereum_network: EthereumNetwork,
+    pub network: Network,
     pub minter_address: Address,
-    pub ethereum_contract_address: Address,
-    pub ethereum_block_height: BlockTag,
+    pub contract_address: Address,
+    pub block_height: BlockTag,
     pub first_scraped_block_number: BlockNumber,
     pub last_scraped_block_number: BlockNumber,
     pub last_observed_block_number: Option<BlockNumber>,
@@ -66,7 +66,7 @@ pub enum InvalidStateError {
 
 impl State {
     pub fn validate_config(&self) -> Result<(), InvalidStateError> {
-        if self.ethereum_contract_address == Address::ZERO {
+        if self.contract_address == Address::ZERO {
             return Err(InvalidStateError::InvalidEthereumContractAddress(
                 "ethereum_contract_address cannot be the zero address".to_string(),
             ));
@@ -143,12 +143,12 @@ impl State {
         );
     }
 
-    pub const fn ethereum_network(&self) -> EthereumNetwork {
-        self.ethereum_network
+    pub const fn ethereum_network(&self) -> Network {
+        self.network
     }
 
     pub const fn ethereum_block_height(&self) -> BlockTag {
-        self.ethereum_block_height
+        self.block_height
     }
 
     fn upgrade(&mut self, upgrade_args: UpgradeArg) -> Result<(), InvalidStateError> {
@@ -162,10 +162,10 @@ impl State {
             let ethereum_contract_address = Address::from_str(&address).map_err(|e| {
                 InvalidStateError::InvalidEthereumContractAddress(format!("ERROR: {}", e))
             })?;
-            self.ethereum_contract_address = ethereum_contract_address;
+            self.contract_address = ethereum_contract_address;
         }
         if let Some(block_height) = ethereum_block_height {
-            self.ethereum_block_height = block_height.into();
+            self.block_height = block_height.into();
         }
         self.validate_config()
     }
@@ -181,10 +181,10 @@ impl State {
         // 2. Transient fields, such as `active_tasks`.
         use ic_utils_ensure::ensure_eq;
 
-        ensure_eq!(self.ethereum_network, other.ethereum_network);
+        ensure_eq!(self.network, other.network);
         ensure_eq!(
-            self.ethereum_contract_address,
-            other.ethereum_contract_address
+            self.contract_address,
+            other.contract_address
         );
         ensure_eq!(
             self.first_scraped_block_number,
@@ -194,7 +194,7 @@ impl State {
             self.last_scraped_block_number,
             other.last_scraped_block_number
         );
-        ensure_eq!(self.ethereum_block_height, other.ethereum_block_height);
+        ensure_eq!(self.block_height, other.block_height);
         ensure_eq!(self.events_to_generate, other.events_to_generate);
         ensure_eq!(self.generated_events, other.generated_events);
         ensure_eq!(self.invalid_events, other.invalid_events);

@@ -6,7 +6,7 @@ use crate::eth_rpc::{BlockTag, Hash};
 use crate::eth_rpc_client::responses::{TransactionReceipt, TransactionStatus};
 use crate::lifecycle::init::InitArg;
 use crate::lifecycle::upgrade::UpgradeArg;
-use crate::lifecycle::EthereumNetwork;
+use crate::lifecycle::Network;
 use crate::numeric::{
     wei_from_milli_ether, BlockNumber, GasAmount, LedgerBurnIndex, LedgerMintIndex, LogIndex,
     TokenId, TransactionNonce, Wei, WeiPerGas,
@@ -48,12 +48,12 @@ mod next_request_id {
 
 fn a_state() -> State {
     State::try_from(InitArg {
-        ethereum_network: Default::default(),
+        network: Default::default(),
         ecdsa_key_name: "test_key_1".to_string(),
-        ethereum_contract_address: None,
+        contract_address: None,
         ledger_id: Principal::from_text("apia6-jaaaa-aaaar-qabma-cai")
             .expect("BUG: invalid principal"),
-        ethereum_block_height: Default::default(),
+        block_height: Default::default(),
         minimum_withdrawal_amount: wei_from_milli_ether(10).into(),
         next_transaction_nonce: Default::default(),
         last_scraped_block_number: Default::default(),
@@ -172,12 +172,12 @@ mod mint_transaction {
     fn dummy_state() -> State {
         use candid::Principal;
         State::try_from(InitArg {
-            ethereum_network: Default::default(),
+            network: Default::default(),
             ecdsa_key_name: "test_key_1".to_string(),
-            ethereum_contract_address: None,
+            contract_address: None,
             ledger_id: Principal::from_text("apia6-jaaaa-aaaar-qabma-cai")
                 .expect("BUG: invalid principal"),
-            ethereum_block_height: Default::default(),
+            block_height: Default::default(),
             minimum_withdrawal_amount: wei_from_milli_ether(10).into(),
             next_transaction_nonce: Default::default(),
             last_scraped_block_number: Default::default(),
@@ -278,22 +278,22 @@ mod upgrade {
         );
         assert_eq!(state.minimum_withdrawal_amount, Wei::from(100_u64));
         assert_eq!(
-            state.ethereum_contract_address,
+            state.contract_address,
             Some(Address::from_str("0xb44B5e756A894775FC32EDdf3314Bb1B1944dC34").unwrap())
         );
-        assert_eq!(state.ethereum_block_height, BlockTag::Safe);
+        assert_eq!(state.block_height, BlockTag::Safe);
     }
 
     fn initial_state() -> State {
         use crate::lifecycle::init::InitArg;
         use candid::Principal;
         State::try_from(InitArg {
-            ethereum_network: Default::default(),
+            network: Default::default(),
             ecdsa_key_name: "test_key_1".to_string(),
-            ethereum_contract_address: None,
+            contract_address: None,
             ledger_id: Principal::from_text("apia6-jaaaa-aaaar-qabma-cai")
                 .expect("BUG: invalid principal"),
-            ethereum_block_height: Default::default(),
+            block_height: Default::default(),
             minimum_withdrawal_amount: wei_from_milli_ether(10).into(),
             next_transaction_nonce: Default::default(),
             last_scraped_block_number: Default::default(),
@@ -367,11 +367,11 @@ prop_compose! {
         last_scraped_block_number in arb_nat(),
     ) -> InitArg {
         InitArg {
-            ethereum_network: EthereumNetwork::Sepolia,
+            network: Network::EthereumSepolia,
             ecdsa_key_name,
-            ethereum_contract_address: contract_address.map(|addr| addr.to_string()),
+            contract_address: contract_address.map(|addr| addr.to_string()),
             ledger_id,
-            ethereum_block_height,
+            block_height,
             minimum_withdrawal_amount,
             next_transaction_nonce,
             last_scraped_block_number
@@ -495,7 +495,7 @@ fn arb_event_type() -> impl Strategy<Value = EventType> {
             event_source,
             reason: "bad principal".to_string()
         }),
-        (arb_event_source()).prop_map(|(event_source)| { EventType::GeneratedMetadataAndAssets { event_source } }),
+        (arb_event_source()).prop_map(|(event_source)| { EventType::GeneratedAssets { event_source } }),
         arb_checked_amount_of().prop_map(|block_number| EventType::SyncedToBlock { block_number }),
         (any::<u64>(), arb_unsigned_tx()).prop_map(|(withdrawal_id, transaction)| {
             EventType::CreatedTransaction {
@@ -702,10 +702,10 @@ fn state_equivalence() {
         },
     };
     let state = State {
-        ethereum_network: EthereumNetwork::Mainnet,
+        network: Network::EthereumMainnet,
         ecdsa_key_name: "test_key".to_string(),
         ledger_id: "apia6-jaaaa-aaaar-qabma-cai".parse().unwrap(),
-        ethereum_contract_address: Some(
+        contract_address: Some(
             "0xb44B5e756A894775FC32EDdf3314Bb1B1944dC34"
                 .parse()
                 .unwrap(),
@@ -715,7 +715,7 @@ fn state_equivalence() {
             chain_code: vec![2; 32],
         }),
         minimum_withdrawal_amount: Wei::new(1_000_000_000_000_000),
-        ethereum_block_height: BlockTag::Finalized,
+        block_height: BlockTag::Finalized,
         first_scraped_block_number: BlockNumber::new(1_000_001),
         last_scraped_block_number: BlockNumber::new(1_000_000),
         last_observed_block_number: Some(BlockNumber::new(2_000_000)),
@@ -793,7 +793,7 @@ fn state_equivalence() {
     assert_ne!(
         Ok(()),
         state.is_equivalent_to(&State {
-            ethereum_contract_address: None,
+            contract_address: None,
             ..state.clone()
         }),
         "changing essential fields should break equivalence",
@@ -811,7 +811,7 @@ fn state_equivalence() {
     assert_ne!(
         Ok(()),
         state.is_equivalent_to(&State {
-            ethereum_block_height: BlockTag::Latest,
+            block_height: BlockTag::Latest,
             ..state.clone()
         }),
         "changing essential fields should break equivalence",
@@ -957,7 +957,7 @@ fn state_equivalence() {
 
 mod eth_balance {
     use crate::eth_rpc_client::responses::{TransactionReceipt, TransactionStatus};
-    use crate::lifecycle::EthereumNetwork;
+    use crate::lifecycle::Network;
     use crate::numeric::{
         BlockNumber, GasAmount, LedgerBurnIndex, TransactionNonce, Wei, WeiPerGas,
     };
@@ -1127,7 +1127,7 @@ mod eth_balance {
 
             let max_fee = self.tx_fee.max_transaction_fee();
             let transaction = Eip1559TransactionRequest {
-                chain_id: EthereumNetwork::Sepolia.chain_id(),
+                chain_id: Network::EthereumSepolia.chain_id(),
                 nonce: self.nonce,
                 max_priority_fee_per_gas: self.tx_fee.max_priority_fee_per_gas,
                 max_fee_per_gas: self.tx_fee.max_fee_per_gas,

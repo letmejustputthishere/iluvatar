@@ -4,7 +4,7 @@ use candid::Principal;
 use ic_cketh_minter::address::Address;
 use ic_cketh_minter::eth_logs::{EventSource, MintEvent};
 use ic_cketh_minter::eth_rpc_client::responses::{TransactionReceipt, TransactionStatus};
-use ic_cketh_minter::lifecycle::EthereumNetwork;
+use ic_cketh_minter::lifecycle::Network;
 use ic_cketh_minter::numeric::{
     BlockNumber, GasAmount, LedgerBurnIndex, LedgerMintIndex, LogIndex, TransactionNonce, Wei,
     WeiPerGas,
@@ -151,13 +151,13 @@ fn should_display_minted_events_sorted_by_decreasing_mint_block_index() {
         apply_state_transition(&mut state, &EventType::AcceptedMint(event_2.clone()));
         apply_state_transition(
             &mut state,
-            &EventType::GeneratedMetadataAndAssets {
+            &EventType::GeneratedAssets {
                 event_source: event_1.source(),
             },
         );
         apply_state_transition(
             &mut state,
-            &EventType::GeneratedMetadataAndAssets {
+            &EventType::GeneratedAssets {
                 event_source: event_2.source(),
             },
         );
@@ -369,7 +369,7 @@ fn should_display_finalized_transactions_sorted_by_decreasing_ledger_burn_index(
         apply_state_transition(&mut state, &EventType::AcceptedMint(deposit.clone()));
         apply_state_transition(
             &mut state,
-            &EventType::GeneratedMetadataAndAssets {
+            &EventType::GeneratedAssets {
                 event_source: deposit.source(),
             },
         );
@@ -446,7 +446,7 @@ fn should_display_finalized_transactions_sorted_by_decreasing_ledger_burn_index(
 #[test]
 fn should_display_etherscan_links_according_to_chosen_network() {
     let sepolia_dashboard = DashboardTemplate {
-        ethereum_network: EthereumNetwork::Sepolia,
+        network: Network::EthereumSepolia,
         ..initial_dashboard()
     };
     DashboardAssert::assert_that(sepolia_dashboard).has_links_satisfying(
@@ -455,7 +455,7 @@ fn should_display_etherscan_links_according_to_chosen_network() {
     );
 
     let mainnet_dashboard = DashboardTemplate {
-        ethereum_network: EthereumNetwork::Mainnet,
+        network: Network::EthereumMainnet,
         ..initial_dashboard()
     };
     DashboardAssert::assert_that(mainnet_dashboard).has_links_satisfying(
@@ -480,7 +480,7 @@ fn should_display_reimbursed_requests() {
         apply_state_transition(&mut state, &EventType::AcceptedMint(deposit.clone()));
         apply_state_transition(
             &mut state,
-            &EventType::GeneratedMetadataAndAssets {
+            &EventType::GeneratedAssets {
                 event_source: deposit.source(),
             },
         );
@@ -605,12 +605,12 @@ fn initial_dashboard() -> DashboardTemplate {
 fn initial_state() -> State {
     use ic_cketh_minter::lifecycle::init::InitArg;
     State::try_from(InitArg {
-        ethereum_network: Default::default(),
+        network: Default::default(),
         ecdsa_key_name: "test_key_1".to_string(),
-        ethereum_contract_address: None,
+        contract_address: None,
         ledger_id: Principal::from_text("apia6-jaaaa-aaaar-qabma-cai")
             .expect("BUG: invalid principal"),
-        ethereum_block_height: Default::default(),
+        block_height: Default::default(),
         minimum_withdrawal_amount: Wei::TWO.into(),
         next_transaction_nonce: TransactionNonce::ZERO.into(),
         last_scraped_block_number: candid::Nat::from(3_956_206),
@@ -669,7 +669,7 @@ fn withdrawal_flow(
     };
     let max_fee = fee.max_transaction_fee();
     let transaction = Eip1559TransactionRequest {
-        chain_id: EthereumNetwork::Sepolia.chain_id(),
+        chain_id: Network::EthereumSepolia.chain_id(),
         nonce,
         max_priority_fee_per_gas: fee.max_priority_fee_per_gas,
         max_fee_per_gas: fee.max_fee_per_gas,

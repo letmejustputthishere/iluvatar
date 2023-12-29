@@ -24,7 +24,7 @@ pub fn apply_state_transition(state: &mut State, payload: &EventType) {
         } => {
             let _ = state.record_invalid_deposit(*event_source, reason.clone());
         }
-        EventType::GeneratedMetadataAndAssets { event_source } => {
+        EventType::GeneratedAssets { event_source } => {
             state.record_successful_generation(*event_source);
         }
         EventType::SyncedToBlock { block_number } => {

@@ -1,29 +1,43 @@
-{% macro etherscan_address_link(address) -%}
-{% match ethereum_network %}
-{%- when EthereumNetwork::Sepolia -%}
+{% macro address_link(address) -%}
+{% match network %}
+{%- when Network::EthereumSepolia -%}
 <a href="https://sepolia.etherscan.io/address/{{address}}"><code>{{address}}</code></a>
-{%- when EthereumNetwork::Mainnet -%}
+{%- when Network::EthereumMainnet -%}
 <a href="https://etherscan.io/address/{{address}}"><code>{{address}}</code></a>
+{%- when Network::AvalancheMainnet -%}
+<a href="https://avascan.info/blockchain/c/address/{{address}}"><code>{{address}}</code></a>
+{%- when Network::AvalancheFuji-%}
+<a href="https://testnet.avascan.info/blockchain/c/address/{{address}}"><code>{{address}}</code></a>
 {% endmatch %}
 {%- endmacro %}
 
-{% macro etherscan_block_link(block_number) -%}
-{% match ethereum_network %}
-{%- when EthereumNetwork::Sepolia -%}
+{% macro block_link(block_number) -%}
+{% match network %}
+{%- when Network::EthereumSepolia -%}
 <a
     href="https://sepolia.etherscan.io/block/{{block_number.to_string_inner()}}"><code>{{block_number.to_string_inner()}}</code></a>
-{%- when EthereumNetwork::Mainnet -%}
+{%- when Network::EthereumMainnet -%}
 <a
     href="https://etherscan.io/block/{{block_number.to_string_inner()}}"><code>{{block_number.to_string_inner()}}</code></a>
+{%- when Network::AvalancheMainnet -%}
+<a
+    href="https://avascan.info/blockchain/c/blocks{{block_number.to_string_inner()}}"><code>{{block_number.to_string_inner()}}</code></a>
+{%- when Network::AvalancheFuji-%}
+<a
+    href="https://testnet.avascan.info/blockchain/c/block/{{block_number.to_string_inner()}}"><code>{{block_number.to_string_inner()}}</code></a>
 {% endmatch %}
 {%- endmacro %}
 
-{% macro etherscan_tx_link(txhash) -%}
-{% match ethereum_network %}
-{%- when EthereumNetwork::Sepolia -%}
+{% macro tx_link(txhash) -%}
+{% match network %}
+{%- when Network::EthereumSepolia -%}
 <a href="https://sepolia.etherscan.io/tx/{{txhash}}"><code>{{txhash}}</code></a>
-{%- when EthereumNetwork::Mainnet -%}
+{%- when Network::EthereumMainnet -%}
 <a href="https://etherscan.io/tx/{{txhash}}"><code>{{txhash}}</code></a>
+{%- when Network::AvalancheMainnet -%}
+<a href="https://avascan.info/blockchain/c/tx/{{txhash}}"><code>{{txhash}}</code></a>
+{%- when Network::AvalancheFuji -%}
+<a href="https://testnet.avascan.info/blockchain/c/tx/{{txhash}}"><code>{{txhash}}</code></a>
 {% endmatch %}
 {%- endmacro %}
 
@@ -101,19 +115,19 @@ N/A
             <h3 id="metadata">Metadata</h3>
             <table>
                 <tbody>
-                    <tr id="ethereum-network">
-                        <th>Ethereum Chain</th>
+                    <tr id="network">
+                        <th>Chain</th>
                         <td><a
-                                href="https://github.com/ethereum-lists/chains/blob/master/_data/chains/eip155-{{ethereum_network.chain_id()}}.json">{{
-                                ethereum_network }}</a></td>
+                                href="https://github.com/ethereum-lists/chains/blob/master/_data/chains/eip155-{{network.chain_id()}}.json">{{
+                                network }}</a></td>
                     </tr>
                     <tr id="contract-address">
                         <th>NFT contract address</th>
-                        <td>{% call etherscan_address_link(contract_address) %}</td>
+                        <td>{% call address_link(contract_address) %}</td>
                     </tr>
                     <tr id="minter-address">
                         <th>Minter address</th>
-                        <td>{% call etherscan_address_link(minter_address) %}</td>
+                        <td>{% call address_link(minter_address) %}</td>
                     </tr>
                 </tbody>
             </table>
@@ -131,24 +145,24 @@ N/A
                     {% if last_observed_block.is_some() -%}
                     <tr id="last-observed-block-number">
                         <th>Last observed block number</th>
-                        <td>{% call etherscan_block_link(last_observed_block.unwrap()) %}</td>
+                        <td>{% call block_link(last_observed_block.unwrap()) %}</td>
                     </tr>
                     {%- endif %}
                     <tr id="last-synced-block-number">
                         <th>Last synced block number</th>
-                        <td>{% call etherscan_block_link(last_synced_block) %}</td>
+                        <td>{% call block_link(last_synced_block) %}</td>
                     </tr>
                     {% if !skipped_blocks.is_empty() -%}
                     <tr id="skipped-blocks">
                         <th>Skipped blocks</th>
                         <td>{% for block in skipped_blocks -%}
-                            {% call etherscan_block_link(block) %}{% if !loop.last %}, {% endif %}
+                            {% call block_link(block) %}{% if !loop.last %}, {% endif %}
                             {%- endfor %}</td>
                     </tr>
                     {%- endif %}
                     <tr id="first-synced-block-number">
                         <th>First synced block number</th>
-                        <td>{% call etherscan_block_link(first_synced_block) %}</td>
+                        <td>{% call block_link(first_synced_block) %}</td>
                     </tr>
                 </tbody>
             </table>
@@ -170,12 +184,12 @@ N/A
                 <tbody>
                     {% for event in events_to_mint -%}
                     <tr>
-                        <td>{% call etherscan_tx_link(event.transaction_hash.to_string()) %}</td>
+                        <td>{% call tx_link(event.transaction_hash.to_string()) %}</td>
                         <td class="numeric">{{ event.log_index }}</td>
-                        <td>{% call etherscan_address_link(event.from_address.to_string()) %}</td>
-                        <td>{% call etherscan_address_link(event.to_address.to_string()) %}</td>
+                        <td>{% call address_link(event.from_address.to_string()) %}</td>
+                        <td>{% call address_link(event.to_address.to_string()) %}</td>
                         <td class="numeric">{{ event.token_id}}</td>
-                        <td class="numeric">{% call etherscan_block_link(event.block_number) %}</td>
+                        <td class="numeric">{% call block_link(event.block_number) %}</td>
                     </tr>
                     {%- endfor %}
                 </tbody>
@@ -197,10 +211,10 @@ N/A
                 <tbody>
                     {% for event in minted_events %}
                     <tr>
-                        <td>{% call etherscan_tx_link(event.mint_event.transaction_hash.to_string()) %}</td>
+                        <td>{% call tx_link(event.mint_event.transaction_hash.to_string()) %}</td>
                         <td class="numeric">{{ event.mint_event.log_index }}</td>
-                        <td>{% call etherscan_address_link(event.mint_event.from_address.to_string()) %}</td>
-                        <td>{% call etherscan_address_link(event.mint_event.to_address.to_string()) %}</td>
+                        <td>{% call address_link(event.mint_event.from_address.to_string()) %}</td>
+                        <td>{% call address_link(event.mint_event.to_address.to_string()) %}</td>
                         <td class="numeric">{{ event.mint_event.token_id}}</td>
                     </tr>
                     {% endfor %}
