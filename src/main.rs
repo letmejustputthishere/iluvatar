@@ -3,10 +3,11 @@ use ic_canister_log::log;
 use ic_canisters_http_types::{HttpRequest, HttpResponse, HttpResponseBuilder};
 use ic_cdk_macros::{init, post_upgrade, pre_upgrade, query, update};
 
-use ic_cketh_minter::mint::scrape_eth_logs;
+use ic_cketh_minter::assets::Asset;
 use ic_cketh_minter::endpoints::events::{
     Event as CandidEvent, EventSource as CandidEventSource, GetEventsArg, GetEventsResult,
 };
+use ic_cketh_minter::mint::scrape_eth_logs;
 
 use ic_cketh_minter::eth_logs::{EventSource, MintEvent};
 use ic_cketh_minter::eth_rpc::into_nat;
@@ -16,17 +17,55 @@ use ic_cketh_minter::logs::INFO;
 use ic_cketh_minter::state::audit::{Event, EventType};
 use ic_cketh_minter::state::{read_state, State, STATE};
 use ic_cketh_minter::{storage, SCRAPING_ETH_LOGS_INTERVAL};
+use image::{ImageBuffer, Rgb};
+use serde_json::{json, to_vec};
 
 use std::time::Duration;
 
 mod dashboard;
 pub const SEPOLIA_TEST_CHAIN_ID: u64 = 11155111;
 
+fn generate_metadata(randomness: [u8; 32]) -> Asset {
+    // create JSON metadata with serde_json
+    let json_literal = json!({
+        "name": "John Doe",
+        "age": 30,
+        "is_admin": false,
+        "phones": ["+44 1234567", "+44 2345678"]
+    });
+
+    // Serialize the JSON value to a Vec<u8>
+    let byte_vec: Vec<u8> = match to_vec(&json_literal) {
+        Ok(vec) => vec,
+        Err(_) => {
+            ic_cdk::trap("Failed to serialize JSON");
+        }
+    };
+    // return Asset
+    Asset {
+        bytes: byte_vec,
+        headers: vec![("Content-Type".to_string(), "application/json".to_string())],
+    }
+}
+
+fn generate_media(randomness: [u8; 32]) -> Asset {
+    let img = ImageBuffer::from_fn(100, 100, |_, _| {
+        Rgb([0, 0, 0]) // sets the color of each pixel to black
+    });
+
+    Asset {
+        bytes: img.to_vec(),
+        headers: vec![("Content-Type".to_string(), "image/png".to_string())],
+    }
+}
+
 fn setup_timers() {
     // Start scraping logs immediately after the install, then repeat with the interval.
-    ic_cdk_timers::set_timer(Duration::from_secs(0), || ic_cdk::spawn(scrape_eth_logs()));
+    ic_cdk_timers::set_timer(Duration::from_secs(0), || {
+        ic_cdk::spawn(scrape_eth_logs(generate_media, generate_metadata))
+    });
     ic_cdk_timers::set_timer_interval(SCRAPING_ETH_LOGS_INTERVAL, || {
-        ic_cdk::spawn(scrape_eth_logs())
+        ic_cdk::spawn(scrape_eth_logs(generate_media, generate_metadata))
     });
 }
 

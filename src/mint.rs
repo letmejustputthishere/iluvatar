@@ -1,4 +1,5 @@
 use crate::address::Address;
+use crate::assets::Asset;
 use crate::eth_logs::{report_transaction_error, MintEvent, MintEventError};
 use crate::eth_rpc::{BlockSpec, HttpOutcallError};
 use crate::eth_rpc_client::EthRpcClient;
@@ -8,12 +9,17 @@ use crate::numeric::BlockNumber;
 use crate::state::{
     audit::process_event, event::EventType, mutate_state, read_state, State, TaskType,
 };
+use crate::storage::store_asset;
 use ic_canister_log::log;
 
+use ic_cdk::api::management_canister::main::raw_rand;
 use std::cmp::{min, Ordering};
 use std::time::Duration;
 
-async fn generate_metadata_and_assets() {
+async fn generate_metadata_and_media(
+    generate_media: fn([u8; 32]) -> Asset,
+    generate_metadata: fn([u8; 32]) -> Asset,
+) {
     let _guard = match TimerGuard::new(TaskType::GenerateMetadataAndAssets) {
         Ok(guard) => guard,
         Err(_) => return,
@@ -24,6 +30,17 @@ async fn generate_metadata_and_assets() {
     let error_count = 0;
 
     for (event_source, event) in events {
+        let (raw_rand,): (Vec<u8>,) = raw_rand()
+            .await
+            // TODO: make sure its safe to trap here
+            .unwrap_or_else(|_e| ic_cdk::trap("call to raw_rand failed"));
+        let raw_rand_32_bytes: [u8; 32] = raw_rand
+            .try_into()
+            .unwrap_or_else(|_e| panic!("raw_rand not 32 bytes"));
+        let media_asset = generate_media(raw_rand_32_bytes);
+        store_asset(format!("media/{}", event.token_id), media_asset);
+        let metadata_asset = generate_metadata(raw_rand_32_bytes);
+        store_asset(format!("metadata/{}", event.token_id), metadata_asset);
         // let block_index = match client
         //     .transfer(TransferArg {
         //         from_subaccount: None,
@@ -63,7 +80,12 @@ async fn generate_metadata_and_assets() {
             INFO,
             "Failed to mint {error_count} events, rescheduling the minting"
         );
-        ic_cdk_timers::set_timer(crate::MINT_RETRY_DELAY, || ic_cdk::spawn(generate_metadata_and_assets()));
+        ic_cdk_timers::set_timer(crate::MINT_RETRY_DELAY, move || {
+            ic_cdk::spawn(generate_metadata_and_media(
+                generate_media,
+                generate_metadata,
+            ))
+        });
     }
 }
 
@@ -72,6 +94,8 @@ async fn generate_metadata_and_assets() {
 /// Returns the last block number that was scraped (which is `min(from + MAX_BLOCK_SPREAD, to)`) if there
 /// was no error when querying the providers, otherwise returns `None`.
 async fn scrape_eth_logs_range_inclusive(
+    generate_media: fn([u8; 32]) -> Asset,
+    generate_metadata: fn([u8; 32]) -> Asset,
     contract_address: Address,
     minter_address: Address,
     from: BlockNumber,
@@ -143,7 +167,12 @@ async fn scrape_eth_logs_range_inclusive(
                 mutate_state(|s| process_event(s, EventType::AcceptedMint(mint)));
             }
             if read_state(State::has_events_to_mint) {
-                ic_cdk_timers::set_timer(Duration::from_secs(0), || ic_cdk::spawn(generate_metadata_and_assets()));
+                ic_cdk_timers::set_timer(Duration::from_secs(0), move || {
+                    ic_cdk::spawn(generate_metadata_and_media(
+                        generate_media,
+                        generate_metadata,
+                    ))
+                });
             }
             for error in errors {
                 if let MintEventError::InvalidEventSource { source, error } = &error {
@@ -171,7 +200,10 @@ async fn scrape_eth_logs_range_inclusive(
     }
 }
 
-pub async fn scrape_eth_logs() {
+pub async fn scrape_eth_logs(
+    generate_media: fn([u8; 32]) -> Asset,
+    generate_metadata: fn([u8; 32]) -> Asset,
+) {
     let _guard = match TimerGuard::new(TaskType::ScrapEthLogs) {
         Ok(guard) => guard,
         Err(_) => return,
@@ -195,6 +227,8 @@ pub async fn scrape_eth_logs() {
             .checked_increment()
             .unwrap_or(BlockNumber::MAX);
         last_scraped_block_number = match scrape_eth_logs_range_inclusive(
+            generate_media,
+            generate_metadata,
             contract_address,
             minter_address,
             next_block_to_query,

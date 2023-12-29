@@ -39,26 +39,15 @@ type InitArg = record {
     // The minter will interact with this Ethereum network.
     ethereum_network : EthereumNetwork;
 
-    // The name of the ECDSA key to use.
-    // E.g., "dfx_test_key" on the local replica.
-    ecdsa_key_name : text;
-
     // Address of the helper smart contract.
-    ethereum_contract_address : opt text;
-
-    // The principal of the ledger that handles ckETH transfers.
-    // The default account of the ckETH minter must be configured as
-    // the minting account of the ledger.
-    ledger_id : principal;
+    ethereum_contract_address : text;
+    
+    // Address of the minter account.
+    // Defaults to the ZERO address if not specified.
+    minter_address : opt text;
 
     // Determine ethereum block height observed by minter.
     ethereum_block_height: BlockTag;
-
-    // Minimum amount in Wei that can be withdrawn.
-    minimum_withdrawal_amount : nat;
-
-    // Nonce of the next transaction to be sent to the Ethereum network.
-    next_transaction_nonce : nat;
 
     // Block number to start scrapping from on the Ethereum network.
     // Scrapping the logs will resume at `last_scraped_block_number + 1` (inclusive).
