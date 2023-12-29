@@ -3,7 +3,7 @@ use ic_canister_log::log;
 use ic_canisters_http_types::{HttpRequest, HttpResponse, HttpResponseBuilder};
 use ic_cdk_macros::{init, post_upgrade, pre_upgrade, query, update};
 
-use ic_cketh_minter::assets::Asset;
+use ic_cketh_minter::assets::{Asset, AssetWithPath};
 use ic_cketh_minter::endpoints::events::{
     Event as CandidEvent, EventSource as CandidEventSource, GetEventsArg, GetEventsResult,
 };
@@ -17,7 +17,8 @@ use ic_cketh_minter::logs::INFO;
 use ic_cketh_minter::state::audit::{Event, EventType};
 use ic_cketh_minter::state::{read_state, State, STATE};
 use ic_cketh_minter::{storage, SCRAPING_ETH_LOGS_INTERVAL};
-use image::{ImageBuffer, Rgb};
+use image::codecs::png::PngEncoder;
+use image::{ColorType, ImageBuffer, ImageEncoder, Rgb, RgbImage};
 use serde_json::{json, to_vec};
 
 use std::time::Duration;
@@ -25,7 +26,10 @@ use std::time::Duration;
 mod dashboard;
 pub const SEPOLIA_TEST_CHAIN_ID: u64 = 11155111;
 
-fn generate_metadata(randomness: [u8; 32]) -> Asset {
+fn generator(randomness: [u8; 32], event: MintEvent) -> Vec<AssetWithPath> {
+    // create vector to hold assets
+    let mut assets: Vec<AssetWithPath> = Vec::new();
+
     // create JSON metadata with serde_json
     let json_literal = json!({
         "name": "John Doe",
@@ -42,30 +46,40 @@ fn generate_metadata(randomness: [u8; 32]) -> Asset {
         }
     };
     // return Asset
-    Asset {
+    let metadata = AssetWithPath {
+        path: format!("/metadata/{}.json", event.token_id),
         bytes: byte_vec,
         headers: vec![("Content-Type".to_string(), "application/json".to_string())],
-    }
-}
+    };
+    assets.push(metadata);
 
-fn generate_media(randomness: [u8; 32]) -> Asset {
-    let img = ImageBuffer::from_fn(100, 100, |_, _| {
-        Rgb([0, 0, 0]) // sets the color of each pixel to black
-    });
+    // Create a black image
+    let mut img: RgbImage = ImageBuffer::new(100, 100);
+    img.fill(1);
 
-    Asset {
-        bytes: img.to_vec(),
-        headers: vec![("Content-Type".to_string(), "image/png".to_string())],
-    }
+    // Serialize the image to PNG format
+    let mut bytes: Vec<u8> = Vec::new();
+    PngEncoder::new(&mut bytes)
+        .write_image(&img, img.width(), img.height(), ColorType::Rgb8)
+        .expect("Failed to encode the image as PNG");
+
+    let image = AssetWithPath {
+        path: format!("/media/{}.png", event.token_id),
+        bytes,
+        headers: vec![("Content-Type".into(), "image/png".into())],
+    };
+    assets.push(image);
+
+    assets
 }
 
 fn setup_timers() {
     // Start scraping logs immediately after the install, then repeat with the interval.
     ic_cdk_timers::set_timer(Duration::from_secs(0), || {
-        ic_cdk::spawn(scrape_eth_logs(generate_media, generate_metadata))
+        ic_cdk::spawn(scrape_eth_logs(generator))
     });
     ic_cdk_timers::set_timer_interval(SCRAPING_ETH_LOGS_INTERVAL, || {
-        ic_cdk::spawn(scrape_eth_logs(generate_media, generate_metadata))
+        ic_cdk::spawn(scrape_eth_logs(generator))
     });
 }
 
@@ -361,7 +375,23 @@ fn http_request(req: HttpRequest) -> HttpResponse {
             .with_body_and_content_length(log.serialize_logs(MAX_BODY_SIZE))
             .build()
     } else {
-        HttpResponseBuilder::not_found().build()
+        // check if the asset is in the stable memory
+        if let Some(asset) = storage::get_asset(&req.path().to_string()) {
+            let mut response_builder = HttpResponseBuilder::ok();
+
+            // Apply headers
+            for (key, value) in asset.headers {
+                response_builder = response_builder.header(key, value);
+            }
+
+            // Set body and content length, then build the response
+            response_builder
+                .with_body_and_content_length(asset.bytes)
+                .build()
+        } else {
+            // return 404
+            HttpResponseBuilder::not_found().build()
+        }
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::address::Address;
-use crate::assets::Asset;
+use crate::assets::{Asset, AssetWithPath};
 use crate::eth_logs::{report_transaction_error, MintEvent, MintEventError};
 use crate::eth_rpc::{BlockSpec, HttpOutcallError};
 use crate::eth_rpc_client::EthRpcClient;
@@ -16,10 +16,7 @@ use ic_cdk::api::management_canister::main::raw_rand;
 use std::cmp::{min, Ordering};
 use std::time::Duration;
 
-async fn generate_metadata_and_media(
-    generate_media: fn([u8; 32]) -> Asset,
-    generate_metadata: fn([u8; 32]) -> Asset,
-) {
+async fn generate_assets(generator: fn([u8; 32], MintEvent) -> Vec<AssetWithPath>) {
     let _guard = match TimerGuard::new(TaskType::GenerateMetadataAndAssets) {
         Ok(guard) => guard,
         Err(_) => return,
@@ -37,10 +34,16 @@ async fn generate_metadata_and_media(
         let raw_rand_32_bytes: [u8; 32] = raw_rand
             .try_into()
             .unwrap_or_else(|_e| panic!("raw_rand not 32 bytes"));
-        let media_asset = generate_media(raw_rand_32_bytes);
-        store_asset(format!("media/{}", event.token_id), media_asset);
-        let metadata_asset = generate_metadata(raw_rand_32_bytes);
-        store_asset(format!("metadata/{}", event.token_id), metadata_asset);
+        let assets = generator(raw_rand_32_bytes, event.clone());
+        for asset in assets {
+            store_asset(
+                asset.path,
+                Asset {
+                    headers: asset.headers,
+                    bytes: asset.bytes,
+                },
+            );
+        }
         // let block_index = match client
         //     .transfer(TransferArg {
         //         from_subaccount: None,
@@ -81,10 +84,7 @@ async fn generate_metadata_and_media(
             "Failed to mint {error_count} events, rescheduling the minting"
         );
         ic_cdk_timers::set_timer(crate::MINT_RETRY_DELAY, move || {
-            ic_cdk::spawn(generate_metadata_and_media(
-                generate_media,
-                generate_metadata,
-            ))
+            ic_cdk::spawn(generate_assets(generator))
         });
     }
 }
@@ -94,8 +94,7 @@ async fn generate_metadata_and_media(
 /// Returns the last block number that was scraped (which is `min(from + MAX_BLOCK_SPREAD, to)`) if there
 /// was no error when querying the providers, otherwise returns `None`.
 async fn scrape_eth_logs_range_inclusive(
-    generate_media: fn([u8; 32]) -> Asset,
-    generate_metadata: fn([u8; 32]) -> Asset,
+    generator: fn([u8; 32], MintEvent) -> Vec<AssetWithPath>,
     contract_address: Address,
     minter_address: Address,
     from: BlockNumber,
@@ -168,10 +167,7 @@ async fn scrape_eth_logs_range_inclusive(
             }
             if read_state(State::has_events_to_mint) {
                 ic_cdk_timers::set_timer(Duration::from_secs(0), move || {
-                    ic_cdk::spawn(generate_metadata_and_media(
-                        generate_media,
-                        generate_metadata,
-                    ))
+                    ic_cdk::spawn(generate_assets(generator))
                 });
             }
             for error in errors {
@@ -200,10 +196,7 @@ async fn scrape_eth_logs_range_inclusive(
     }
 }
 
-pub async fn scrape_eth_logs(
-    generate_media: fn([u8; 32]) -> Asset,
-    generate_metadata: fn([u8; 32]) -> Asset,
-) {
+pub async fn scrape_eth_logs(generator: fn([u8; 32], MintEvent) -> Vec<AssetWithPath>) {
     let _guard = match TimerGuard::new(TaskType::ScrapEthLogs) {
         Ok(guard) => guard,
         Err(_) => return,
@@ -227,8 +220,7 @@ pub async fn scrape_eth_logs(
             .checked_increment()
             .unwrap_or(BlockNumber::MAX);
         last_scraped_block_number = match scrape_eth_logs_range_inclusive(
-            generate_media,
-            generate_metadata,
+            generator,
             contract_address,
             minter_address,
             next_block_to_query,
